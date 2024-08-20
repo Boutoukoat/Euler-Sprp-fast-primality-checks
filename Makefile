@@ -26,8 +26,7 @@ tests/sanity_check: tests/sanity_check.cpp m128_utils.h m128_utils.cpp m_reg.h o
 	$(GGG) -o tests/sanity_check tests/sanity_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
 
 tests/gap_check: tests/gap_check.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel
-	# $(GGG) -fopenmp=libomp -o tests/gap_check tests/gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
-	$(GGG) -o tests/gap_check tests/gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
+	$(GGG) -fopenmp=libomp -o tests/gap_check tests/gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
 
 tests/random_test: tests/random_test.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tools/generic.cpp tools/generic.h tools/slow.cpp tools/slow.h
 	$(GGG) -o tests/random_test tests/random_test.cpp m128_utils.cpp optimized65.cpp optimized128.cpp montgomery128.cpp tools/generic.cpp tools/slow.cpp
