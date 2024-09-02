@@ -12,8 +12,60 @@
 
 // utilities to convert strings from/to 128 bits inumbers
 #include "m128_utils.h"
+
+// utilities for divisibility sieve
+#include "m_reg.h"
+
 // use a simplistic wheel sieve mod 2,3,5,7,11
 #include "gap_check.wheel"
+
+// ------------------------------------------------------------------------
+// fast divisibility by constants 13, 31, 41, 61 , the montgomery way
+// ------------------------------------------------------------------------
+static bool divisibility_sieve(uint64_t v_lo, uint64_t v_hi)
+{
+	// Use the factors of mersenne number 2^60-1 because the modular reduction is simple
+	// The factors of 2^60 - 1 are 3^2 * 5^2 * 7 * 11 * 13 * 31 * 41 * 61 * 151 * 331 * 1321
+
+	// first, reduce mod (2^60-1)
+	// This is flat code which would cost less than any branch
+	uint64_t mask60 = (1ull << 60) - 1;
+	uint64_t mod60 = v_lo & mask60;
+	my_shrd64(&v_hi, &v_lo, 60);
+	mod60 += v_lo & mask60;
+	my_shrd64(&v_hi, &v_lo, 60);
+	mod60 += v_lo;
+	// mod60 is now a 62 bit number with the same factors than the input number v.
+
+	// since factors 3, 2, 5, 11 are skipped, let's start with 13
+	uint64_t divisor, montg_magic, rem;
+
+	divisor = 13;
+	montg_magic = (uint64_t) - 1 / divisor + 1;
+	my_mul64(mod60 * montg_magic, divisor, &rem);
+	if (rem == 0)
+		return false;	// composite for sure
+
+	divisor = 31;
+	montg_magic = (uint64_t) - 1 / divisor + 1;
+	my_mul64(mod60 * montg_magic, divisor, &rem);
+	if (rem == 0)
+		return false;	// composite for sure
+
+	divisor = 41;
+	montg_magic = (uint64_t) - 1 / divisor + 1;
+	my_mul64(mod60 * montg_magic, divisor, &rem);
+	if (rem == 0)
+		return false;	// composite for sure
+
+	divisor = 61;
+	montg_magic = (uint64_t) - 1 / divisor + 1;
+	my_mul64(mod60 * montg_magic, divisor, &rem);
+	if (rem == 0)
+		return false;	// composite for sure
+
+	return true;		// might be prime
+}
 
 // search a prime backwards in range ]lo, hi], from hi to lo
 static uint128_t search_backwards(uint128_t lo, uint128_t hi)
@@ -33,19 +85,22 @@ static uint128_t search_backwards(uint128_t lo, uint128_t hi)
 		// verify the prime candidate 
 		uint64_t t_lo = (uint64_t) hi;
 		uint64_t t_hi = (uint64_t) (hi >> 64);
+		bool bs = divisibility_sieve(t_lo, t_hi);
+		if (bs) {
 #if PARANOID
-		bool bg = montgomerySprpTest(t_lo, t_hi);
-		bool ba = optimizedSprpTest(t_lo, t_hi);
-		if (ba != bg) {
-			printf("0x%16.16lx%16.16lx\n", t_hi, t_lo);
-			assert(ba == bg);
-		}
+			bool bg = montgomerySprpTest(t_lo, t_hi);
+			bool ba = optimizedSprpTest(t_lo, t_hi);
+			if (ba != bg) {
+				printf("0x%16.16lx%16.16lx\n", t_hi, t_lo);
+				assert(ba == bg);
+			}
 #else
-		bool ba = optimizedSprpTest(t_lo, t_hi);
+			bool ba = optimizedSprpTest(t_lo, t_hi);
 #endif
-		if (ba) {
-			// pseudoprime found
-			break;
+			if (ba) {
+				// pseudoprime found
+				break;
+			}
 		}
 		// move backwards to the next sieve candidate
 		hi -= (t > v) ? t - v : (t + sizeof(sieve_backwards) / sizeof(sieve_backwards[0])) - v;
@@ -73,19 +128,22 @@ static uint128_t search_forwards(uint128_t lo, uint128_t hi)
 		// verify the prime candidate 
 		uint64_t t_lo = (uint64_t) lo;
 		uint64_t t_hi = (uint64_t) (lo >> 64);
+		bool bs = divisibility_sieve(t_lo, t_hi);
+		if (bs) {
 #if PARANOID
-		bool bg = montgomerySprpTest(t_lo, t_hi);
-		bool ba = optimizedSprpTest(t_lo, t_hi);
-		if (ba != bg) {
-			printf("0x%16.16lx%16.16lx\n", t_hi, t_lo);
-			assert(ba == bg);
-		}
+			bool bg = montgomerySprpTest(t_lo, t_hi);
+			bool ba = optimizedSprpTest(t_lo, t_hi);
+			if (ba != bg) {
+				printf("0x%16.16lx%16.16lx\n", t_hi, t_lo);
+				assert(ba == bg);
+			}
 #else
-		bool ba = optimizedSprpTest(t_lo, t_hi);
+			bool ba = optimizedSprpTest(t_lo, t_hi);
 #endif
-		if (ba) {
-			// pseudoprime found
-			break;
+			if (ba) {
+				// pseudoprime found
+				break;
+			}
 		}
 		// move to the next sieve candidate
 		lo += (v > t) ? v - t : (v + sizeof(sieve_forwards) / sizeof(sieve_forwards[0])) - t;
