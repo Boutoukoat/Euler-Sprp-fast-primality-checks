@@ -1,3 +1,11 @@
+// -------------------------------------------------------------------------------------
+//
+// Fast primality tests : compare GMP and multiple sprp tests
+// 
+// Deterministic to 81.5 bits https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test#Testing_against_small_sets_of_bases
+// and better choices of bases could be taken from https://miller-rabin.appspot.com/
+// -------------------------------------------------------------------------------------
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -28,18 +36,29 @@ int main(int argc, char **argv)
 	mpz_t xgmp;
 	mpz_init(xgmp);
 
+	// CSV header
+	printf("Prime\nAVX2;");
+	printf("Prime\nGMP;");
+	printf("Composite\nAVX2;");
+	printf("Composite\nGMP;");
+	printf("\n");
+
 	for (unsigned i = 3; i <= 128; i++) {
+		// fill a mantissa and make it filled with 0 and 1
 		uint128_t x = (uint128_t) - 1;
 		x /= 7;
+		// make sure a few msbbits are set
 		x = ~x;
+		// adjust the size of the number
 		x >>= 128 - i;
+		// make it odd
 		x |= 1;
 
 		fflush(stdout);
 		fflush(stderr);
 
 		// --------------------------------------------------
-		// find a prime number
+		// search a prime number, brute force
 		// --------------------------------------------------
 		do {
 			x += 2;
@@ -55,14 +74,16 @@ int main(int argc, char **argv)
 			printf("\n");
 		}
 		// --------------------------------------------------
-		// check prime numbers
+		// check the prime number
 		// --------------------------------------------------
 		tavx = 0;
 		tgmp = 0;
 		for (unsigned j = 0; j < 1000; j++) {
 			t = _rdtsc();
 			tavx -= t;
-			bavx = optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64)) ? avx2SprpTest((uint64_t) x, (uint64_t) (x >> 64)) : false;
+			bavx =
+			    optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64)) ? avx2SprpTest((uint64_t) x,
+												 (uint64_t) (x >> 64)) : false;
 			t = _rdtsc();
 			tavx += t;
 			tgmp -= t;
@@ -78,7 +99,7 @@ int main(int argc, char **argv)
 		}
 
 		// --------------------------------------------------
-		// average cycles
+		// get average cycles
 		// --------------------------------------------------
 		double ttavx1 = (double)tavx;
 		ttavx1 /= 1000;
@@ -86,7 +107,7 @@ int main(int argc, char **argv)
 		ttgmp1 /= 1000;
 
 		// --------------------------------------------------
-		// find a composite number
+		// search a composite number, brute force
 		// --------------------------------------------------
 		do {
 			x += 2;
@@ -102,14 +123,16 @@ int main(int argc, char **argv)
 			printf("\n");
 		}
 		// --------------------------------------------------
-		// check composite numbers
+		// check the composite number
 		// --------------------------------------------------
 		tavx = 0;
 		tgmp = 0;
 		for (unsigned j = 0; j < 1000; j++) {
 			t = _rdtsc();
 			tavx -= t;
-			bavx = optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64)) ? avx2SprpTest((uint64_t) x, (uint64_t) (x >> 64)) : false;
+			bavx =
+			    optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64)) ? avx2SprpTest((uint64_t) x,
+												 (uint64_t) (x >> 64)) : false;
 			t = _rdtsc();
 			tavx += t;
 			tgmp -= t;
@@ -125,7 +148,7 @@ int main(int argc, char **argv)
 		}
 
 		// --------------------------------------------------
-		// average cycles
+		// get average cycles
 		// --------------------------------------------------
 		double ttavx2 = (double)tavx;
 		ttavx2 /= 1000;
@@ -133,7 +156,7 @@ int main(int argc, char **argv)
 		ttgmp2 /= 1000;
 
 		// --------------------------------------------------
-		// display cycles
+		// display cycles  (CSV-compatible format)
 		// --------------------------------------------------
 		printf("%3d;%9.1f;%9.1f;%9.1f;%9.1f;\n", i, ttavx1, ttgmp1, ttavx2, ttgmp2);
 	}
