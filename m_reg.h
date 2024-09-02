@@ -34,7 +34,7 @@ uint64_t my_mul64(uint64_t a, uint64_t b, uint64_t * hi)
 		return lo;
 #else
 		uint64_t lo;
- asm(" mulq %[b]\n": "=a"(lo), "=d"(*hi): [a] "a"(a),[b] "rm"(b):"flags");
+ asm(" mulq %[b]\n": "=a"(lo), "=d"(*hi): [a] "a"(a),[b] "r"(b):"flags");
 		return lo;
 #endif
 #elif (INLINE_ASM && defined(__aarch64__))
@@ -168,6 +168,9 @@ uint8_t my_sbb64(uint8_t borrow_in, uint64_t a, uint64_t b, uint64_t * diff)
 static inline __attribute__((always_inline))
 void my_shrd64(uint64_t * a, uint64_t * b, uint64_t c)
 {
+#if PARANOID
+	assert(c < 64);
+#endif
 #if (INLINE_ASM && defined(__x86_64__))
 	if (__builtin_constant_p(c) && c == 0) {
 	} else if (__builtin_constant_p(c) && c == 1) {
@@ -179,9 +182,6 @@ void my_shrd64(uint64_t * a, uint64_t * b, uint64_t c)
 	}
 #else
 	if (c == 0) {
-	} else if (c == 64) {
-		*b = *a;
-		*a = 0;
 	} else {
 		(*b) = ((*b) >> c) | ((*a) << (64 - c));
 		(*a) >>= c;
@@ -193,6 +193,9 @@ void my_shrd64(uint64_t * a, uint64_t * b, uint64_t c)
 static inline __attribute__((always_inline))
 void my_shrd64(uint64_t * a, uint64_t * b, uint64_t * c, uint64_t d)
 {
+#if PARANOID
+	assert(d < 64);
+#endif
 #if (INLINE_ASM && defined(__x86_64__))
 	if (__builtin_constant_p(d) && d == 0) {
 	} else if (__builtin_constant_p(d) && d == 1) {
@@ -204,10 +207,6 @@ void my_shrd64(uint64_t * a, uint64_t * b, uint64_t * c, uint64_t d)
 	}
 #else
 	if (d == 0) {
-	} else if (d == 64) {
-		*c = *b;
-		*b = *a;
-		*a = 0;
 	} else {
 		(*c) = ((*c) >> d) | ((*b) << (64 - d));
 		(*b) = ((*b) >> d) | ((*a) << (64 - d));
@@ -220,6 +219,9 @@ void my_shrd64(uint64_t * a, uint64_t * b, uint64_t * c, uint64_t d)
 static inline __attribute__((always_inline))
 void my_shld64(uint64_t * a, uint64_t * b, uint64_t c)
 {
+#if PARANOID
+	assert(c < 64);
+#endif
 #if (INLINE_ASM && defined(__x86_64__))
 	if (__builtin_constant_p(c) && c == 0) {
 	} else if (__builtin_constant_p(c) && c == 1) {
@@ -231,9 +233,6 @@ void my_shld64(uint64_t * a, uint64_t * b, uint64_t c)
 	}
 #else
 	if (c == 0) {
-	} else if (c == 64) {
-		*a = *b;
-		*b = 0;
 	} else {
 		(*a) = ((*a) << c) | ((*b) >> (64 - c));
 		(*b) <<= c;
@@ -245,6 +244,9 @@ void my_shld64(uint64_t * a, uint64_t * b, uint64_t c)
 static inline __attribute__((always_inline))
 void my_shld64(uint64_t * a, uint64_t * b, uint64_t * c, uint64_t d)
 {
+#if PARANOID
+	assert(d < 64);
+#endif
 #if (INLINE_ASM && defined(__x86_64__))
 	if (__builtin_constant_p(d) && d == 0) {
 	} else if (__builtin_constant_p(d) && d == 1) {
@@ -256,10 +258,6 @@ void my_shld64(uint64_t * a, uint64_t * b, uint64_t * c, uint64_t d)
 	}
 #else
 	if (d == 0) {
-	} else if (d == 64) {
-		*a = *b;
-		*b = *c;
-		*c = 0;
 	} else {
 		(*a) = ((*a) << d) | ((*b) >> (64 - d));
 		(*b) = ((*b) << d) | ((*c) >> (64 - d));
@@ -272,6 +270,9 @@ void my_shld64(uint64_t * a, uint64_t * b, uint64_t * c, uint64_t d)
 static inline __attribute__((always_inline))
 uint64_t my_shr64(uint64_t a, uint64_t c)
 {
+#if PARANOID
+	assert(c < 64);
+#endif
 #if (INLINE_ASM && defined(__x86_64__))
 	if (__builtin_constant_p(c) && c == 0) {
 		return a;
@@ -294,6 +295,9 @@ uint64_t my_shr64(uint64_t a, uint64_t c)
 static inline __attribute__((always_inline))
 uint64_t my_shl64(uint64_t a, uint64_t c)
 {
+#if PARANOID
+	assert(c < 64);
+#endif
 #if (INLINE_ASM && defined(__x86_64__))
 	if (__builtin_constant_p(c) && c == 0) {
 		return a;
@@ -327,6 +331,44 @@ uint64_t my_bzh64(uint64_t n, uint64_t pos)
 #endif
 #else
 	return n & ((1ull << pos) - 1);
+#endif
+}
+
+// count trailing zeroes in binary representation 
+static inline __attribute__((always_inline))
+uint64_t my_ctz32(uint32_t n)
+{
+#if (INLINE_ASM && defined(__x86_64__))
+#if defined(__BMI1__)
+	uint64_t t;
+ asm(" tzcnt %l1, %l0\n": "=r"(t): "r"(n):"flags");
+	return t;
+#else
+	if (n)
+		return __builtin_ctz(n);
+	return 32;
+#endif
+#else
+#if defined(__GNUC__)
+	if (n)
+		return __builtin_ctz(n);
+	return 32;
+#else
+	if (n == 0)
+		return 64;
+	uint32_t r = 0;
+	if ((n & 0xFFFFull) == 0)
+		r += 16, n >>= 16;
+	if ((n & 0xFFull) == 0)
+		r += 8, n >>= 8;
+	if ((n & 0xFull) == 0)
+		r += 4, n >>= 4;
+	if ((n & 0x3ull) == 0)
+		r += 2, n >>= 2;
+	if ((n & 0x1ull) == 0)
+		r += 1;
+	return r;
+#endif
 #endif
 }
 
@@ -378,6 +420,44 @@ uint64_t my_ctz128(uint64_t n_lo, uint64_t n_hi)
 		return my_ctz64(n_lo);
 	}
 	return 64 + my_ctz64(n_hi);
+}
+
+// count leading zeroes in binary representation
+static inline __attribute__((always_inline))
+uint64_t my_clz32(uint32_t n)
+{
+#if (INLINE_ASM && defined(__x86_64__))
+#ifdef __BMI1__
+	uint32_t t;
+ asm(" lzcnt %l1, %l0\n": "=r"(t): "r"(n):"flags");
+	return t;
+#else
+	if (n)
+		return __builtin_clz(n);
+	return 32;
+#endif
+#else
+#if defined(__GNUC__)
+	if (n)
+		return __builtin_clz(n);
+	return 32;
+#else
+	if (n == 0)
+		return 64;
+	uint32_t r = 0;
+	if ((n & (0xFFFFull << 48)) == 0)
+		r += 16, n <<= 16;
+	if ((n & (0xFFull << 56)) == 0)
+		r += 8, n <<= 8;
+	if ((n & (0xFull << 60)) == 0)
+		r += 4, n <<= 4;
+	if ((n & (0x3ull << 62)) == 0)
+		r += 2, n <<= 2;
+	if ((n & (0x1ull << 63)) == 0)
+		r += 1;
+	return r;
+#endif
+#endif
 }
 
 // count leading zeroes in binary representation
@@ -446,9 +526,8 @@ uint64_t my_rdtsc(void)
 
 	// I am not sure what the clock unit is, it depends on pre-scaler setup
 	// A multiplication by 32 might be needed on my platform 
-	// Maybe, a multiplication by 34 is closer ?
-	return val << 5;
-	return val * 34;
+	return val * 32;  // aarch64 emulation on x86_64 ?
+	return ((val / 3) * 25) << 4;   // maybe for ARM M1 ?
 	return val;
 #else
 #error "todo : unsupported _rdtsc implementation\n"

@@ -4,8 +4,7 @@
 #include <assert.h>
 
 #include "m128_utils.h"
-#include "optimized.h"
-#include "montgomery.h"
+#include "avx2_sprp.cpp"
 
 // min and max primes for every bit range
 
@@ -140,266 +139,6 @@ struct {
 	{"0x2000000000000000000000000000001B", "0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFF77"},
 	{"0x40000000000000000000000000000007", "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
 	{"0x8000000000000000000000000000001D", "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61"}
-};
-
-struct {
-	const char *bound;
-	const bool fermat;
-} bounds[] = {
-	{"0x3", true},
-	{"0x7", true},
-	{"0xF", false},
-	{"0x1F", true},
-	{"0x3F", false},
-	{"0x7F", true},
-	{"0xFF", false},
-	{"0x1FF", false},
-	{"0x3FF", false},
-	{"0x7FF", true},
-	{"0xFFF", false},
-	{"0x1FFF", true},
-	{"0x3FFF", false},
-	{"0x7FFF", false},
-	{"0xFFFF", false},
-	{"0x1FFFF", true},
-	{"0x3FFFF", false},
-	{"0x7FFFF", true},
-	{"0xFFFFF", false},
-	{"0x1FFFFF", false},
-	{"0x3FFFFF", false},
-	{"0x7FFFFF", true},
-	{"0xFFFFFF", false},
-	{"0x1FFFFFF", false},
-	{"0x3FFFFFF", false},
-	{"0x7FFFFFF", false},
-	{"0xFFFFFFF", false},
-	{"0x1FFFFFFF", true},
-	{"0x3FFFFFFF", false},
-	{"0x7FFFFFFF", true},
-	{"0xFFFFFFFF", false},
-	{"0x1FFFFFFFF", false},
-	{"0x3FFFFFFFF", false},
-	{"0x7FFFFFFFF", false},
-	{"0xFFFFFFFFF", false},
-	{"0x1FFFFFFFFF", true},
-	{"0x3FFFFFFFFF", false},
-	{"0x7FFFFFFFFF", false},
-	{"0xFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFF", true},
-	{"0x3FFFFFFFFFF", false},
-	{"0x7FFFFFFFFFF", true},
-	{"0xFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", true},
-	{"0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", false},
-	{"0x3", true},
-	{"0x5", true},
-	{"0x9", false},
-	{"0x11", true},
-	{"0x21", false},
-	{"0x41", false},
-	{"0x81", false},
-	{"0x101", true},
-	{"0x201", false},
-	{"0x401", false},
-	{"0x801", false},
-	{"0x1001", false},
-	{"0x2001", false},
-	{"0x4001", false},
-	{"0x8001", false},
-	{"0x10001", true},
-	{"0x20001", false},
-	{"0x40001", false},
-	{"0x80001", false},
-	{"0x100001", false},
-	{"0x200001", false},
-	{"0x400001", false},
-	{"0x800001", false},
-	{"0x1000001", false},
-	{"0x2000001", false},
-	{"0x4000001", false},
-	{"0x8000001", false},
-	{"0x10000001", false},
-	{"0x20000001", false},
-	{"0x40000001", false},
-	{"0x80000001", false},
-	{"0x100000001", true},
-	{"0x200000001", false},
-	{"0x400000001", false},
-	{"0x800000001", false},
-	{"0x1000000001", false},
-	{"0x2000000001", false},
-	{"0x4000000001", false},
-	{"0x8000000001", false},
-	{"0x10000000001", false},
-	{"0x20000000001", false},
-	{"0x40000000001", false},
-	{"0x80000000001", false},
-	{"0x100000000001", false},
-	{"0x200000000001", false},
-	{"0x400000000001", false},
-	{"0x800000000001", false},
-	{"0x1000000000001", false},
-	{"0x2000000000001", false},
-	{"0x4000000000001", false},
-	{"0x8000000000001", false},
-	{"0x10000000000001", false},
-	{"0x20000000000001", false},
-	{"0x40000000000001", false},
-	{"0x80000000000001", false},
-	{"0x100000000000001", false},
-	{"0x200000000000001", false},
-	{"0x400000000000001", false},
-	{"0x800000000000001", false},
-	{"0x1000000000000001", false},
-	{"0x2000000000000001", false},
-	{"0x4000000000000001", false},
-	{"0x8000000000000001", false},
-	{"0x10000000000000001", true},
-	{"0x20000000000000001", false},
-	{"0x40000000000000001", false},
-	{"0x80000000000000001", false},
-	{"0x100000000000000001", false},
-	{"0x200000000000000001", false},
-	{"0x400000000000000001", false},
-	{"0x800000000000000001", false},
-	{"0x1000000000000000001", false},
-	{"0x2000000000000000001", false},
-	{"0x4000000000000000001", false},
-	{"0x8000000000000000001", false},
-	{"0x10000000000000000001", false},
-	{"0x20000000000000000001", false},
-	{"0x40000000000000000001", false},
-	{"0x80000000000000000001", false},
-	{"0x100000000000000000001", false},
-	{"0x200000000000000000001", false},
-	{"0x400000000000000000001", false},
-	{"0x800000000000000000001", false},
-	{"0x1000000000000000000001", false},
-	{"0x2000000000000000000001", false},
-	{"0x4000000000000000000001", false},
-	{"0x8000000000000000000001", false},
-	{"0x10000000000000000000001", false},
-	{"0x20000000000000000000001", false},
-	{"0x40000000000000000000001", false},
-	{"0x80000000000000000000001", false},
-	{"0x100000000000000000000001", false},
-	{"0x200000000000000000000001", false},
-	{"0x400000000000000000000001", false},
-	{"0x800000000000000000000001", false},
-	{"0x1000000000000000000000001", false},
-	{"0x2000000000000000000000001", false},
-	{"0x4000000000000000000000001", false},
-	{"0x8000000000000000000000001", false},
-	{"0x10000000000000000000000001", false},
-	{"0x20000000000000000000000001", false},
-	{"0x40000000000000000000000001", false},
-	{"0x80000000000000000000000001", false},
-	{"0x100000000000000000000000001", false},
-	{"0x200000000000000000000000001", false},
-	{"0x400000000000000000000000001", false},
-	{"0x800000000000000000000000001", false},
-	{"0x1000000000000000000000000001", false},
-	{"0x2000000000000000000000000001", false},
-	{"0x4000000000000000000000000001", false},
-	{"0x8000000000000000000000000001", false},
-	{"0x10000000000000000000000000001", false},
-	{"0x20000000000000000000000000001", false},
-	{"0x40000000000000000000000000001", false},
-	{"0x80000000000000000000000000001", false},
-	{"0x100000000000000000000000000001", false},
-	{"0x200000000000000000000000000001", false},
-	{"0x400000000000000000000000000001", false},
-	{"0x800000000000000000000000000001", false},
-	{"0x1000000000000000000000000000001", false},
-	{"0x2000000000000000000000000000001", false},
-	{"0x4000000000000000000000000000001", false},
-	{"0x8000000000000000000000000000001", false},
-	{"0x10000000000000000000000000000001", false},
-	{"0x20000000000000000000000000000001", false},
-	{"0x40000000000000000000000000000001", false},
-	{"0x80000000000000000000000000000001", false}
 };
 
 const char *pseudoprimes[] = {
@@ -710,6 +449,99 @@ static const char *composites[] = {
 	"0xd9078d3e1214b2477115a9793bf90621"
 };
 
+uint64_t self_tests(void)
+{
+	uint64_t check_count = 0;
+
+	// check endianness , different in C intrinsics vs. gdb vs. documentation.
+	__m256i e;
+       
+ 	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+	assert(_mm256_extract_epi32(e, 0) == 0xf);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 1) == 0xe);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 2) == 0xd);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 3) == 0xc);
+		check_count++;
+ 	e = _mm256_blend_epi32(e, _mm256_setzero_si256(), 0xaa);
+	assert(_mm256_extract_epi32(e, 0) == 0xf);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 1) == 0x0);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 2) == 0xd);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 3) == 0x0);
+		check_count++;
+
+	e = _mm256_set_epi64x(0x1, 0x2, 0x3, 0x4);
+	assert(_mm256_extract_epi32(e, 0) == 0x4);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 1) == 0x0);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 2) == 0x3);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 3) == 0x0);
+		check_count++;
+
+ 	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+	e = _mm256_shuffle_epi32(e, _MM_SHUFFLE(3,3,1,1));
+	assert(_mm256_extract_epi32(e, 0) == 0xe);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 1) == 0xe);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 2) == 0xc);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 3) == 0xc);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 4) == 0xa);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 5) == 0xa);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 6) == 0x8);
+		check_count++;
+	assert(_mm256_extract_epi32(e, 7) == 0x8);
+		check_count++;
+
+		// check sprp exit conditions
+	__m256i ma[1], mb[1], mask;
+	bool b;
+	uint32_t f;
+	mask = _mm256_setzero_si256();
+	ma[0] = _mm256_set_epi32(0, 1 , 0, 2, 0, 3, 0, 4);
+	mb[0] = _mm256_set_epi32(0, 8 , 0, 8, 0, 8, 0, 8);
+	b = avx2_cmp_next1(&mask, ma, mb);
+	assert(b == false);
+		check_count++;
+	f = _mm256_movemask_epi8(mask);
+	assert(f == 0xf0f0f0f0);
+		check_count++;
+	ma[0] = _mm256_set_epi32(0, 1 , 0, 8, 0, 3, 0, 4);
+	b = avx2_cmp_next1(&mask, ma, mb);
+	assert(b == false);
+		check_count++;
+	f = _mm256_movemask_epi8(mask);
+	assert(f == 0xf0fff0f0);
+		check_count++;
+	ma[0] = _mm256_set_epi32(0, 2 , 0, 9, 0, 3, 0, 9);
+	mb[0] = _mm256_set_epi32(0, 9 , 0, 9, 0, 9, 0, 9);
+	b = avx2_neg_cmp_next1(&mask, ma, mb);
+	assert(b == true);
+		check_count++;
+
+	// safeguards 
+	b = avx2SprpTest(101, 0);
+	assert(b == true);
+		check_count++;
+	b = avx2SprpTest(103, 0);
+	assert(b == true);
+		check_count++;
+
+	return check_count;
+       
+}
+
 int main(int argc, char **argv)
 {
 	uint64_t check_count = 0;
@@ -719,20 +551,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	printf("For each bit size, test largest and smallest odd integer\n");
-	for (unsigned i = 0; i < sizeof(bounds) / sizeof(bounds[0]); i++) {
-		uint128_t v = convert128(bounds[i].bound);
-		uint64_t v_lo = (uint64_t) v;
-		uint64_t v_hi = (uint64_t) (v >> 64);
-		bool b = optimizedFermatTest(v_lo, v_hi);
-		assert(bounds[i].fermat == b);
-		check_count++;
-		b = montgomeryFermatTest(v_lo, v_hi);
-		assert(bounds[i].fermat == b);
-		check_count++;
-	}
+	printf("Self tests\n");
+	check_count += self_tests();
 
-	printf("For each bit size, test strong pseudoprimes base 2\n");
+	printf("For each bit size, test pseudoprimes base 2, must be composite\n");
 	for (unsigned i = 0; i < sizeof(pseudoprimes) / sizeof(pseudoprimes[0]); i++) {
 		uint64_t v_lo;
 		uint64_t v_hi;
@@ -740,21 +562,12 @@ int main(int argc, char **argv)
 		uint128_t v = convert128(pseudoprimes[i]);
 		v_lo = (uint64_t) v;
 		v_hi = (uint64_t) (v >> 64);
-		b = optimizedFermatTest(v_lo, v_hi);
-		assert(b == true);
-		check_count++;
-		b = optimizedSprpTest(v_lo, v_hi);
-		assert(b == true);
-		check_count++;
-		b = montgomeryFermatTest(v_lo, v_hi);
-		assert(b == true);
-		check_count++;
-		b = montgomerySprpTest(v_lo, v_hi);
-		assert(b == true);
+		b = avx2SprpTest(v_lo, v_hi);
+		assert(b == false);
 		check_count++;
 	}
 
-	printf("For each bit size, test composites base 2\n");
+	printf("For each bit size, test composites base 2, should not escape\n");
 	for (unsigned i = 0; i < sizeof(composites) / sizeof(composites[0]); i++) {
 		uint64_t v_lo;
 		uint64_t v_hi;
@@ -762,15 +575,12 @@ int main(int argc, char **argv)
 		uint128_t v = convert128(composites[i]);
 		v_lo = (uint64_t) v;
 		v_hi = (uint64_t) (v >> 64);
-		b = optimizedSprpTest(v_lo, v_hi);
-		assert(b == false);
-		check_count++;
-		b = montgomerySprpTest(v_lo, v_hi);
+		b = avx2SprpTest(v_lo, v_hi);
 		assert(b == false);
 		check_count++;
 	}
 
-	printf("For each bit size, test non-trivial square roots of 1\n");
+	printf("For each bit size, test non-trivial square roots of 1, should not escape\n");
 	for (unsigned i = 0; i < sizeof(square_root) / sizeof(square_root[0]); i++) {
 		uint64_t v_lo;
 		uint64_t v_hi;
@@ -778,15 +588,12 @@ int main(int argc, char **argv)
 		uint128_t v = convert128(square_root[i]);
 		v_lo = (uint64_t) v;
 		v_hi = (uint64_t) (v >> 64);
-		b = optimizedSprpTest(v_lo, v_hi);
-		assert(b == false);
-		check_count++;
-		b = montgomerySprpTest(v_lo, v_hi);
+		b = avx2SprpTest(v_lo, v_hi);
 		assert(b == false);
 		check_count++;
 	}
 
-	printf("For each bit size, test smallest and largest primes\n");
+	printf("For each bit size, test smallest and largest proven primes, cannot be composite\n");
 	for (unsigned i = 0; i < sizeof(primes_min_max) / sizeof(primes_min_max[0]); i++) {
 		uint64_t v_lo;
 		uint64_t v_hi;
@@ -795,42 +602,14 @@ int main(int argc, char **argv)
 		uint128_t v_max = convert128(primes_min_max[i].p_max);	// largest prime
 		v_lo = (uint64_t) v_min;
 		v_hi = (uint64_t) (v_min >> 64);
-		b_min = optimizedFermatTest(v_lo, v_hi);
+		// my_printf(v_min); printf("\n");
+		b_min = avx2SprpTest(v_lo, v_hi);
 		assert(b_min == true);
 		check_count++;
 		v_lo = (uint64_t) v_max;
 		v_hi = (uint64_t) (v_max >> 64);
-		b_max = optimizedFermatTest(v_lo, v_hi);
-		assert(b_max == true);
-		check_count++;
-		v_lo = (uint64_t) v_min;
-		v_hi = (uint64_t) (v_min >> 64);
-		b_min = montgomeryFermatTest(v_lo, v_hi);
-		assert(b_min == true);
-		check_count++;
-		v_lo = (uint64_t) v_max;
-		v_hi = (uint64_t) (v_max >> 64);
-		b_max = montgomeryFermatTest(v_lo, v_hi);
-		assert(b_max == true);
-		check_count++;
-		v_lo = (uint64_t) v_min;
-		v_hi = (uint64_t) (v_min >> 64);
-		b_min = optimizedSprpTest(v_lo, v_hi);
-		assert(b_min == true);
-		check_count++;
-		v_lo = (uint64_t) v_max;
-		v_hi = (uint64_t) (v_max >> 64);
-		b_max = optimizedSprpTest(v_lo, v_hi);
-		assert(b_max == true);
-		check_count++;
-		v_lo = (uint64_t) v_min;
-		v_hi = (uint64_t) (v_min >> 64);
-		b_min = montgomerySprpTest(v_lo, v_hi);
-		assert(b_min == true);
-		check_count++;
-		v_lo = (uint64_t) v_max;
-		v_hi = (uint64_t) (v_max >> 64);
-		b_max = montgomerySprpTest(v_lo, v_hi);
+		// my_printf(v_max); printf("\n");
+		b_max = avx2SprpTest(v_lo, v_hi);
 		assert(b_max == true);
 		check_count++;
 	}

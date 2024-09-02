@@ -43,11 +43,18 @@ uint128_t my_slowReduce(uint128_t x, uint128_t mod)
 // return value < mod
 uint128_t my_slowModAdd(uint128_t a, uint128_t b, uint128_t mod)
 {
+	// input condition : a <= n-1, b <= n-1  then  (a+b) <= 2*n-2 
+	// i.e. (a+b) < 2*n and (a+b)-n < n
+	// then only one subtraction is needed.
+	//
+	// when input conditions are not met, more subtractions will be needed
+	//
 	uint128_t t = a + b;
 	if (t < a) {
 		// wrap-around occured , this could occur if mod is 127 bits.
-		// input condition : a <= n-1, b <= n-1  then  (a+b) <= 2*n-2
+#if PARANOID
 		uint128_t u = t;
+#endif
 		t = t - mod;	// subtract the modulus, ignore carry and borrow.
 #if PARANOID
 		// already checked carry was 1 and now check borrow is 1
@@ -56,7 +63,6 @@ uint128_t my_slowModAdd(uint128_t a, uint128_t b, uint128_t mod)
 		assert(t < mod);	// reduction is complete because (a+b) - n <= n-2
 
 #endif
-		return t;
 	}
 	// most frequent case
 	if (t < mod) {
@@ -234,7 +240,9 @@ bool my_slowSprp2(uint128_t mod)
 		}
 		// square
 		result = my_slowModSqr(result, mod);
-
+		if (result == 1) {
+			return false;
+		}
 	}
 	if (result == mod - 1) {
 		return true;
@@ -285,6 +293,9 @@ bool my_slowSprp3(uint128_t mod)
 		}
 		// square
 		result = my_slowModSqr(result, mod);
+		if (result == 1) {
+			return false;
+		}
 
 	}
 	if (result == mod - 1) {

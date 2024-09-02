@@ -77,13 +77,13 @@ The following files implement different variants of the same algorithm.
 		$ make clean
 		$ make check
 
-	To run the perf tests and get csv files for Excel 
+	To run the perf tests and get csv files for Excel, stored in ./misc directory
 		$ make csv
 
 This code for gcc and clang compilers makes heavy use of x86-64 assembly language. 
 To use it on a different compiler and/or a different hw architecture, toggle INLINE_ASM from 1 to 0 in m_reg.h
 
-__arch64__ suport:
+__arch64__ support:
 
 	I don't have an ARM under my heavy hands, I did install an emulation for Debian x86-64
 
@@ -96,6 +96,12 @@ __arch64__ suport:
 
 	GGG = aarch64-linux-gnu-g++ -O3 -W -static -DPARANOID=1 -I . -I ./tools
 
+__avx256__ support:
+
+	experimental, work in progress !!! : avx2 is used to run 4 sprp tests at the same time for deterministic primality checks
+	(heavy rework to expect)
+
+uint128_t support:
 Note that the compiler must support natively a uint128_t type, and such a class implementation 
 can be found on the web, like https://github.com/calccrypto/uint128_t (first google result). 
 Note also that LLVM supports uint128_t since 4.1 and clang 3.1 since about 2006. Nothing really new ....

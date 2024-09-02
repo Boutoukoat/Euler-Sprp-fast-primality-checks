@@ -211,24 +211,24 @@ void ciosModSquare(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uint64
 	cs = (uint128_t) m *mod_lo;	// #4
 	cs += t0;
 	cs = cs >> 64;
-	cs += m;		//#3, removed at compile time
+	cs += m;	
 	cs += t1;
 	t0 = (uint64_t) cs;
 	cs = cs >> 64;
 	cs += t2;
 	t1 = (uint64_t) cs;
 
-	cc = (uint128_t) n_hi *n_hi;	// #6
+	cc = (uint128_t) n_hi *n_hi;	// #5
 	cc += t1;
 	t1 = (uint64_t) cc;
 	cc = cc >> 64;
 	t2 = (uint64_t) cc;
 
-	m = t0 * mmagic;	// #3
-	cs = (uint128_t) m *mod_lo;	// #8
+	m = t0 * mmagic;	// #6
+	cs = (uint128_t) m *mod_lo;	// #7
 	cs += t0;
 	cs = cs >> 64;
-	cs += m;		//#3, removed at compile time
+	cs += m;		
 	cs += t1;
 	t0 = (uint64_t) cs;
 	cs = cs >> 64;
@@ -255,7 +255,7 @@ void ciosModSquare3(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uint6
     movq    %[mmagic], %[t6]              \n\
     imulq   %[t0], %[t6]                  \n\
     movq    %[t6], %%rdx                  \n\
-    mulxq    %[mod_lo], %%rdx, %[t5]      \n\
+    mulxq   %[mod_lo], %%rdx, %[t5]       \n\
     xorl    %k[t2], %k[t2]                \n\
     addq    %[t4], %[t6]                  \n\
     setb    %b[t2]                        \n\
@@ -412,6 +412,9 @@ bool optimizedSprpTest65(uint64_t n_lo)
 		// square and reduce
 		ciosModSquare(&res_lo, &res_hi, n_lo, mmagic);
 		ciosSubtract(&res_lo, &res_hi, n_lo);
+		if ((res_lo == one_lo) && (res_hi == one_hi))
+			return false;
+
 	}
 	return ((res_lo == m1_lo) && (res_hi == m1_hi));
 }

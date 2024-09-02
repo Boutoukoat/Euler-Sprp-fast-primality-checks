@@ -18,7 +18,7 @@
 
 typedef unsigned __int128 uint128_t;
 
-// subtract the modulus i'mod' multiple times from the input number 'res', if needed
+// subtract the modulus 'mod' multiple times from the input number 'res', if needed
 static inline void ciosSubtract128(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uint64_t mod_hi)
 {
 	uint64_t n_lo, n_hi;
@@ -101,8 +101,11 @@ void ciosModSquare64(uint64_t * res_lo, uint64_t mod_lo, uint64_t mmagic)
 	cs = cs >> 64;
 	cs += t1;
 	t0 = (uint64_t) cs;
+#if 0
+	// not necessary with 2-bits guard
 	cs = cs >> 64;
 	t1 = (uint64_t) cs;
+#endif
 #if PARANOID
 	assert(cs >> 64 == 0);
 #endif
@@ -162,6 +165,12 @@ void ciosModSquare128(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uin
 	cc = cc >> 64;
 	cc += t2;
 	t2 = (uint64_t) cc;
+#if 0
+	// not necessary with 2-bits guard
+	cc = cc >> 64;
+	uint64_t t3 = (uint64_t) cc;
+	assert(t3 == 0);
+#endif
 #if PARANOID
 	assert(cc >> 64 == 0);
 #endif
@@ -188,6 +197,13 @@ void ciosModSquare128(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uin
 	cs = cs >> 64;
 	cs += t2;
 	t1 = (uint64_t) cs;
+#if 0
+	// not necessary with 2-bits guard
+	cs = cs >> 64;
+	cs += t3;
+	t2 = (uint64_t) cs;
+	assert(t2 == 0);
+#endif
 #if PARANOID
 	assert(cs >> 64 == 0);
 #endif
@@ -213,85 +229,6 @@ void ciosModSquare3_64(uint64_t * res_lo, uint64_t mod_lo, uint64_t mmagic)
 	ciosModSquare64(res_lo, mod_lo, mmagic);
 }
 
-// Montgomery multiplication by 1
-static void ciosModMul1_64(uint64_t * res_lo, uint64_t mod_lo, uint64_t mmagic)
-{
-	uint128_t cs, cc;
-	uint64_t t0, t1, m;
-
-	t0 = *res_lo;
-
-	m = t0 * mmagic;	// #1
-	cs = (uint128_t) m *mod_lo;	// #2
-	cs += t0;
-	cs = cs >> 64;
-	t0 = (uint64_t) cs;
-#if PARANOID
-	assert(cs >> 64 == 0);
-#endif
-	*res_lo = t0;
-}
-
-// Montgomery multiplication by 1
-static void ciosModMul1_128(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uint64_t mod_hi, uint64_t mmagic)
-{
-	uint128_t cs, cc;
-	uint64_t t0, t1, m;
-
-	t0 = *res_lo;
-	t1 = *res_hi;
-
-	m = t0 * mmagic;	// #1
-	cs = (uint128_t) m *mod_lo;	// #2
-	cs += t0;
-	cs = cs >> 64;
-	if (__builtin_constant_p(mod_hi) && mod_hi == 0) {
-	} else if (__builtin_constant_p(mod_hi) && mod_hi == 1) {
-		cs += m;	//#3, removed at compile time
-	} else if (__builtin_constant_p(mod_hi) && mod_hi == 2) {
-		cs += m;	//#3, removed at compile time
-		cs += m;	//#3, removed at compile time
-	} else if (__builtin_constant_p(mod_hi) && mod_hi == 3) {
-		cs += m;	//#3, removed at compile time
-		cs += m;	//#3, removed at compile time
-		cs += m;	//#3, removed at compile time
-	} else {
-		cs += (uint128_t) m *mod_hi;	//#3, removed at compile time
-	}
-	cs += t1;
-	t0 = (uint64_t) cs;
-	cs = cs >> 64;
-	t1 = (uint64_t) cs;
-
-	m = t0 * mmagic;	// #4
-	cs = (uint128_t) m *mod_lo;	// #5
-	cs += t0;
-	cs = cs >> 64;
-	if (__builtin_constant_p(mod_hi) && mod_hi == 0) {
-	} else if (__builtin_constant_p(mod_hi) && mod_hi == 1) {
-		cs += m;	//#3, removed at compile time
-	} else if (__builtin_constant_p(mod_hi) && mod_hi == 2) {
-		cs += m;	//#3, removed at compile time
-		cs += m;	//#3, removed at compile time
-	} else if (__builtin_constant_p(mod_hi) && mod_hi == 3) {
-		cs += m;	//#3, removed at compile time
-		cs += m;	//#3, removed at compile time
-		cs += m;	//#3, removed at compile time
-	} else {
-		cs += (uint128_t) m *mod_hi;	//#3, removed at compile time
-	}
-	cs += t1;
-	t0 = (uint64_t) cs;
-	cs = cs >> 64;
-	t1 = (uint64_t) cs;
-#if PARANOID
-	assert(cs >> 64 == 0);
-#endif
-
-	*res_lo = t0;
-	*res_hi = t1;
-}
-
 static inline __attribute__((always_inline))
 bool ciosFermatTest64(uint64_t n_lo)
 {
@@ -299,18 +236,22 @@ bool ciosFermatTest64(uint64_t n_lo)
 	assert((n_lo & 1) == 1);
 #endif
 
-	uint64_t res_lo, res_hi;
+	uint64_t res_lo, one_lo;
 	int bit;
 	// constant -1/m mod 2^64
 	uint64_t mmagic = montgomeryInverse64(n_lo);
 
 	// enter montgomery domain
 	// constant 2^64 mod m
-	ciosConstants64(n_lo, &res_lo);
-	// constant 2 * 2^64 mod m
-	res_lo <<= 1;
+	ciosConstants64(n_lo, &one_lo);
+	// constant (1 << msbits) * 2^64 mod m
 
-	bit = 63 - my_clz64(n_lo);
+	bit = 64 - my_clz64(n_lo);
+	uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+	uint64_t msb_mask = (1 << msb_bits) - 1;
+	bit -= msb_bits;
+	res_lo = one_lo << ((n_lo >> bit) & msb_mask);
+
 	while (bit >= 5) {
 		bit -= 3;
 		// square and reduce
@@ -326,9 +267,6 @@ bool ciosFermatTest64(uint64_t n_lo)
 		// shift
 		res_lo <<= (n_lo >> bit) & 1;
 	}
-
-	// exit montgomery domain , multiply by 1
-	ciosModMul1_64(&res_lo, n_lo, mmagic);
 
 	// make sure result is strictly less than the modulus
 	ciosSubtract64(&res_lo, n_lo);
@@ -348,7 +286,7 @@ bool ciosFermatTest64(uint64_t n_lo)
 	//   return false : n is composite for sure
 	//   return true : n is maybe prime, more tests are needed (like Lucas test)
 	//
-	return (res_lo == (legendre ? n_lo - 1 : 1));
+	return (res_lo == (legendre ? n_lo - one_lo : one_lo));
 }
 
 static inline __attribute__((always_inline))
@@ -359,23 +297,39 @@ bool ciosFermatTest128(uint64_t n_lo, uint64_t n_hi)
 #endif
 
 	uint64_t res_lo, res_hi;
+	uint64_t one_lo, one_hi;
 	int bit;
 	// constant -1/m mod 2^64
 	uint64_t mmagic = montgomeryInverse64(n_lo);
 
 	// enter montgomery domain
 	// constant 2^128 mod m
-	ciosConstants128(n_lo, n_hi, &res_lo, &res_hi);
-	// constant 2 * 2^128
-	my_shld64(&res_hi, &res_lo, 1);
+	ciosConstants128(n_lo, n_hi, &one_lo, &one_hi);
+	res_hi = one_hi;
+	res_lo = one_lo;
 
 	if (__builtin_constant_p(n_hi) && n_hi == 0) {
-		bit = 63 - my_clz64(n_lo);
+		bit = 64 - my_clz64(n_lo);
+	uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+	uint64_t msb_mask = (1 << msb_bits) - 1;
+	bit -= msb_bits;
+	my_shld64(&res_hi, &res_lo, (n_lo >> bit) & msb_mask);
+
 	} else {
 		if (n_hi == 0) {
-			bit = 63 - my_clz64(n_lo);
+			bit = 64 - my_clz64(n_lo);
+	uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+	uint64_t msb_mask = (1 << msb_bits) - 1;
+	bit -= msb_bits;
+	my_shld64(&res_hi, &res_lo, (n_lo >> bit) & msb_mask);
+
 		} else {
-			bit = 63 - my_clz64(n_hi);
+			bit = 64 - my_clz64(n_hi);
+			uint64_t msb_bits = bit < 4 ? bit : 3;
+			uint64_t msb_mask = (1 << msb_bits) - 1;
+			bit -= msb_bits;
+			my_shld64(&res_hi, &res_lo, (n_hi >> bit) & msb_mask);
+
 			while (bit >= 3) {
 				bit -= 3;
 				// square and reduce
@@ -411,9 +365,6 @@ bool ciosFermatTest128(uint64_t n_lo, uint64_t n_hi)
 		my_shld64(&res_hi, &res_lo, ((n_lo >> bit) & 1));
 	}
 
-	// exit montgomery domain , multiply by 1
-	ciosModMul1_128(&res_lo, &res_hi, n_lo, n_hi, mmagic);
-
 	// make sure result is strictly less than the modulus
 	ciosSubtract128(&res_lo, &res_hi, n_lo, n_hi);
 
@@ -427,12 +378,18 @@ bool ciosFermatTest128(uint64_t n_lo, uint64_t n_hi)
 	uint64_t legendre = ((n_lo >> 1) ^ (n_lo >> 2)) & 1;	// shortcut calculation of legendre symbol
 	// when bit 1 and bit 2 are different, then n = 3 or 5 mod 8 and legendre(2,n) is -1, l = 1
 	// when bit 1 and bit 2 are same, then n = 1 or 7 mod 8 and legendre(2,n) is 1, l = 0
-
+	//
+	// compute (m-1) * 2^128 % mod = modulus - one
+	uint64_t m1_lo;
+	uint64_t m1_hi;
+	uint8_t c;
+	c = my_sbb64(0, n_lo, one_lo, &m1_lo);
+	my_sbb64(c, n_hi, one_hi, &m1_hi);
 	// check pseudo-primality
 	//   return false : n is composite for sure
 	//   return true : n is maybe prime, more tests are needed (like Lucas test)
 	//
-	return ((res_lo == (legendre ? n_lo - 1 : 1)) && (res_hi == (legendre ? n_hi : 0)));
+	return ((res_lo == (legendre ? m1_lo : one_lo)) && (res_hi == (legendre ? m1_hi : one_hi)));
 }
 
 static inline __attribute__((always_inline))
@@ -458,16 +415,18 @@ bool ciosSprpTest64(uint64_t n_lo)
 	// constant n-1 * 2^64
 	m1_lo = n_lo - one_lo;
 
-	// constant 2 * 2^64
-	res_lo = one_lo << 1;
-
 	// n - 1 = s * 2^k
 	k = my_ctz64(n_lo - 1);
 	s_lo = n_lo >> k;
 
-	bit = 63 - my_clz64(s_lo);
+	bit = 64 - my_clz64(s_lo);
+	// constant (1 << msbits) * 2^64
+	uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+	uint64_t msb_mask = (1 << msb_bits) - 1;
+	bit -= msb_bits;
+	res_lo = one_lo << ((s_lo >> bit) & msb_mask);
 
-	while (bit >= 3) {
+	while (bit >= 5) {
 		bit -= 3;
 		// square and reduce
 		ciosModSquare3_64(&res_lo, n_lo, mmagic);
@@ -483,8 +442,8 @@ bool ciosSprpTest64(uint64_t n_lo)
 		res_lo <<= (s_lo >> bit) & 1;
 	}
 
-	// if res == 1 return true;
 	ciosSubtract64(&res_lo, n_lo);
+	// if res == 1 return true;
 	if (res_lo == one_lo)
 		return true;
 
@@ -496,6 +455,9 @@ bool ciosSprpTest64(uint64_t n_lo)
 		// square and reduce
 		ciosModSquare64(&res_lo, n_lo, mmagic);
 		ciosSubtract64(&res_lo, n_lo);
+		// if res == 1 return false;
+		if (res_lo == one_lo)
+			return false;
 	}
 	// if res == n-1 return true;
 	return (res_lo == m1_lo);
@@ -519,17 +481,15 @@ bool ciosSprpTest128(uint64_t n_lo, uint64_t n_hi)
 	uint64_t mmagic = montgomeryInverse64(n_lo);
 
 	// enter montgomery domain
-	// constant 1 * 2^128 mod m
+	// constant one = 1 * 2^128 mod m
 	ciosConstants128(n_lo, n_hi, &one_lo, &one_hi);
 
-	// constant n-1 * 2^128
+	// constant n-1 * 2^128 = n - one
 	c = my_sbb64(0, n_lo, one_lo, &m1_lo);
 	my_sbb64(c, n_hi, one_hi, &m1_hi);
 
-	// constant 2 * 2^128
 	res_lo = one_lo;
 	res_hi = one_hi;
-	my_shld64(&res_hi, &res_lo, 1);
 
 	// n - 1 = s * 2^k
 	k = my_ctz128(n_lo - 1, n_hi);
@@ -538,7 +498,12 @@ bool ciosSprpTest128(uint64_t n_lo, uint64_t n_hi)
 	my_shrd64(&s_hi, &s_lo, k);
 
 	if (s_hi != 0) {
-		bit = 63 - my_clz64(s_hi);
+		bit = 64 - my_clz64(s_hi);
+		uint64_t msb_bits = bit < 4 ? bit : 3;
+		uint64_t msb_mask = (1 << msb_bits) - 1;
+		bit -= msb_bits;
+		my_shld64(&res_hi, &res_lo, (s_hi >> bit) & msb_mask);
+
 		while (bit >= 3) {
 			bit -= 3;
 			// square and reduce
@@ -557,7 +522,11 @@ bool ciosSprpTest128(uint64_t n_lo, uint64_t n_hi)
 
 		bit = 64;
 	} else {
-		bit = 63 - my_clz64(s_lo);
+		bit = 64 - my_clz64(s_lo);
+		uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+		uint64_t msb_mask = (1 << msb_bits) - 1;
+		bit -= msb_bits;
+		my_shld64(&res_hi, &res_lo, (s_lo >> bit) & msb_mask);
 	}
 
 	while (bit >= 3) {
@@ -576,8 +545,10 @@ bool ciosSprpTest128(uint64_t n_lo, uint64_t n_hi)
 		my_shld64(&res_hi, &res_lo, ((s_lo >> bit) & 1));
 	}
 
-	// if res == 1 return true;
+	// Make sure the result is less than the modulus
 	ciosSubtract128(&res_lo, &res_hi, n_lo, n_hi);
+
+	// if res == 1 return true;
 	if ((res_lo == one_lo) && (res_hi == one_hi))
 		return true;
 
@@ -589,10 +560,18 @@ bool ciosSprpTest128(uint64_t n_lo, uint64_t n_hi)
 		// square and reduce
 		ciosModSquare128(&res_lo, &res_hi, n_lo, n_hi, mmagic);
 		ciosSubtract128(&res_lo, &res_hi, n_lo, n_hi);
+	// if res == 1 return false;
+	if ((res_lo == one_lo) && (res_hi == one_hi))
+		return false;
+
 	}
 	// if res == n-1 return true;
 	return ((res_lo == m1_lo) && (res_hi == m1_hi));
 }
+
+// ------------------------------------------------------------
+// Fermat + Euler primality test base 2
+// ------------------------------------------------------------
 
 bool optimizedFermatTest(uint64_t n_lo, uint64_t n_hi)
 {
@@ -621,6 +600,10 @@ bool optimizedFermatTest(uint64_t n_lo, uint64_t n_hi)
 	}
 }
 
+// ------------------------------------------------------------
+// SPRP primality test base 2
+// ------------------------------------------------------------
+
 bool optimizedSprpTest(uint64_t n_lo, uint64_t n_hi)
 {
 	// dispatch to the fastest code for each bit size
@@ -636,15 +619,16 @@ bool optimizedSprpTest(uint64_t n_lo, uint64_t n_hi)
 			return montgomeryFermatTest8(n_lo);	// from 0 to 8 bits (blitz version)
 		}
 		if (n_lo >> 55 != 0) {
-			// there are shifts without reduction up to 7 bits in the optimized code
-			// 64 bits - 7 bit shift - 2 guard bits = 55 bits
-			return ciosSprpTest128(n_lo, 0);	// from 56 to 64 bits
+			// there are shifts without reduction up to 7 bits in the optimized code.
+			// 64 bits - 7 bit shift - 2 guard bits = 55 bits.
+			return ciosSprpTest128(n_lo, 0);	// from 56 to 64 bits.
 		}
 		return ciosSprpTest64(n_lo);	// 3-62 bits
 	default:
 		if (n_hi >> 55) {
-			// there are shifts without reduction up to 7 bits in the optimized code
-			// 128 bits - 7 bit shift - 2 guard bits = 119 bits
+			// there are shifts without reduction up to 7 bits in the optimized code.
+			// 128 bits - 7 bit shift - 2 guard bits = 119 bits.
+			// this requires code where shifts do not overflow
 			return montgomerySprpTest128(n_lo, n_hi);	// 120-127 bits
 		}
 		return ciosSprpTest128(n_lo, n_hi);	// 67-119 bits

@@ -163,7 +163,7 @@ static void ciosModMul128(uint64_t * res_lo, uint64_t * res_hi, uint64_t b_lo, u
 {
 	uint64_t a_lo = *res_lo, a_hi = *res_hi;
 	uint128_t cs, cc;
-	uint64_t t0, t1, t2, m, ignore;
+	uint64_t t0, t1, t2, t3, m, ignore;
 
 	cc = (uint128_t) a_lo *b_lo;	// #1
 	t0 = (uint64_t) cc;
@@ -202,11 +202,10 @@ static void ciosModMul128(uint64_t * res_lo, uint64_t * res_hi, uint64_t b_lo, u
 	cc = cc >> 64;
 	cc += t2;
 	t2 = (uint64_t) cc;
-	if (cc >> 64) {
-		ciosSubtract128(&t1, &t2, cc >> 64, mod_lo, mod_hi);
-	}
+	cc = cc >> 64;
+	t3 = (uint64_t) cc;
 #if PARANOID
-	// assert(cc >> 64 == 0);
+	assert(cc >> 64 == 0);
 #endif
 
 	m = t0 * mmagic;	// #8
@@ -220,6 +219,7 @@ static void ciosModMul128(uint64_t * res_lo, uint64_t * res_hi, uint64_t b_lo, u
 	cs += t2;
 	t1 = (uint64_t) cs;
 	cs = cs >> 64;
+	cs += t3;
 	t2 = (uint64_t) cs;
 	if (t2) {
 		ciosSubtract128(&t0, &t1, t2, mod_lo, mod_hi);
@@ -433,6 +433,8 @@ bool montgomerySprpTest64(uint64_t n_lo)
 		// square and reduce
 		ciosModMul64(&res_lo, res_lo, n_lo, mmagic);
 		ciosSubtract64(&res_lo, 0, n_lo);
+		if (res_lo == one_lo)
+			return false;
 	}
 	// if res == n-1 return true;
 	return (res_lo == m1_lo);
@@ -525,6 +527,9 @@ bool montgomerySprpTest128(uint64_t n_lo, uint64_t n_hi)
 		// square and reduce
 		ciosModMul128(&res_lo, &res_hi, res_lo, res_hi, n_lo, n_hi, mmagic);
 		ciosSubtract128(&res_lo, &res_hi, 0, n_lo, n_hi);
+		if ((res_lo == one_lo) && (res_hi == one_hi))
+			return false;
+
 	}
 	// if res == n-1 return true;
 	return ((res_lo == m1_lo) && (res_hi == m1_hi));

@@ -147,6 +147,17 @@ int main(int argc, char **argv)
 		}
 	}
 
+	uint64_t x2 = (uint64_t)1 << 50;
+	assert(my_clz64(x2) == 13);
+				check_count++;
+	assert(my_ctz64(x2) == 50);
+				check_count++;
+	uint32_t x1 = (uint32_t)1 << 20;
+	assert(my_clz32(x1) == 11);
+				check_count++;
+	assert(my_ctz32(x1) == 20);
+				check_count++;
+
 	assert(check_count != 0);
 	printf("%lu checks passed\n", check_count);
 	return 0;
