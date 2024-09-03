@@ -37,10 +37,10 @@ int main(int argc, char **argv)
 	mpz_init(xgmp);
 
 	// CSV header
-	printf("Prime\nAVX2;");
-	printf("Prime\nGMP;");
-	printf("Composite\nAVX2;");
-	printf("Composite\nGMP;");
+	printf("\"Prime AVX2\";");
+	printf("\"Prime GMP\";");
+	printf("\"Composite AVX2\";");
+	printf("\"Composite GMP\";");
 	printf("\n");
 
 	for (unsigned i = 3; i <= 128; i++) {
