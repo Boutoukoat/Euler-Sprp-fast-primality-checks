@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 	printf("\n");
 
 	for (unsigned i = 3; i <= 128; i++) {
-		// fill a mantissa and make it filled with 0 and 1
+		// fill a mantissa with 0 and 1
 		uint128_t x = (uint128_t) - 1;
 		x /= 7;
 		// make sure a few msbbits are set
@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 			my_printf(x);
 			printf("\n");
 		}
+
 		// --------------------------------------------------
 		// check the prime number
 		// --------------------------------------------------
@@ -122,6 +123,7 @@ int main(int argc, char **argv)
 			my_printf(x);
 			printf("\n");
 		}
+
 		// --------------------------------------------------
 		// check the composite number
 		// --------------------------------------------------
