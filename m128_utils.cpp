@@ -55,6 +55,16 @@ uint128_t convert128(const char *buffer)
 			str = s + 1;
 			break;
 		}
+		if (c == '^') {
+			char *s;
+			long exponent = strtol(str, &s, 10);
+			uint128_t base = res;
+			res = 1;
+			while (exponent-- > 0)
+				res *= base;
+			str = s + 1;
+			break;
+		}
 		if (c == '.') {
 			dot = true;
 			continue;

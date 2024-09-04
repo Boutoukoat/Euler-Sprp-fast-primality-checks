@@ -22,6 +22,7 @@ typedef unsigned __int128 uint128_t;
 // 1e12 .......... : decimal number 1000000000000
 // 1.5e12 ........ : decimal number 1500000000000
 // 0b00010001 .... : binary nnumber 17
+// 2^80 .......... : decimal number 1208925819614629174706176
 uint128_t convert128(const char *str);
 
 // fill a temp buffer (at least 140 bytes worst case) with 

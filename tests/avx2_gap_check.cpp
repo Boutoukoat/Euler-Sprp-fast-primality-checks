@@ -49,6 +49,7 @@ static uint128_t search_backwards(uint128_t lo, uint128_t hi)
 			bool bs = optimizedSprpTest(t_lo, t_hi);
 			if (bs) {
 				// pseudoprime found
+				// TODO : do this test only when the gap size exceeds the limit of interest
 				bool ba = avx2SprpTest(t_lo, t_hi);
 				if (ba) {
 					// prime found
@@ -87,6 +88,7 @@ static uint128_t search_forwards(uint128_t lo, uint128_t hi)
 			bool bs = optimizedSprpTest(t_lo, t_hi);
 			if (bs) {
 				// pseudoprime found
+				// TODO : do this test only when the gap size exceeds the limit of interest
 				bool ba = avx2SprpTest(t_lo, t_hi);
 				if (ba) {
 					// prime found
@@ -104,7 +106,7 @@ static uint128_t search_forwards(uint128_t lo, uint128_t hi)
 
 static void help(void)
 {
-	printf("Simplistic and fast search of maximal prime gaps 3 to 128 bits\n");
+	printf("'Simplistic' and 'fast' search of maximal prime gaps 3 to 128 bits\n");
 	printf("\n");
 	printf("usage : -start xxxxx -end yyyyyy -inc zzzz -radix 10 -h \n");
 	printf("\n");
@@ -120,15 +122,26 @@ static void help(void)
 	printf("   $ gap_check -start 0x100000000000000000000 -end 0x1000000000000000000000 -inc 1000000000\n");
 	printf("   $ env OMP_NUM_THREADS=4 taskset -c 1,3,5,7 ./tests/gap_check -start 1e20 -end 1e21 -radix 10\n");
 	printf("\n");
+	printf("usage : -start xxxxx -end yyyyyy -inc zzzz -radix 16 -g uuu\n");
+	printf("\n");
+	printf("\n-g uuu : Display all gaps > uuu in the requested range");
+	printf("\n");
+	printf("Examples:\n");
+	printf("\n");
+	printf("   $ avx2_gap_check -g 1200 -start 2^124 -end 2^125 -inc 2^110\n");
+	printf("\n");
+	printf("\n");
 }
 
 int main(int argc, char **argv)
 {
-	uint128_t start = (uint128_t) 1 << 68;
-	uint128_t end = ((uint128_t) 2 << 68) - 1;
-	uint128_t inc = (uint128_t) 1 << 48;
+	// by default, a search range where primality test is proven deterministic
+	uint128_t start = (uint128_t) 0x70 << 72;
+	uint128_t end = ((uint128_t) 0x71 << 72) - 1;
+	uint128_t inc = (uint128_t) 1 << 52;
 	int radix = 16;
 	int digits = 32;
+	uint64_t gap_bound = (uint128_t)0;
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-start")) {
@@ -151,6 +164,11 @@ int main(int argc, char **argv)
 				digits = 40;
 			else if (radix == 2)
 				digits = 128;
+			continue;
+		}
+		if (!strcmp(argv[i], "-g"))
+		{
+			gap_bound = atoi(argv[++i]);
 			continue;
 		}
 		if (!strcmp(argv[i], "-h")) {
@@ -183,13 +201,18 @@ int main(int argc, char **argv)
 	assert(start >= 7);
 	assert(end > start);
 	assert(radix == 2 || radix == 10 || radix == 16);
+	if ((end-start)/inc >= 0xffffffffull)
+	{
+		printf("no more than 2^32 threads, there is a OMP limit\n");
+		assert ((end-start)/inc < 0xffffffffull);
+	}
 
 	long t0 = (long)time(NULL);
 	uint64_t k = (end - start + inc - 1) / inc;
 
 #pragma omp parallel for
 	for (uint64_t x = 0; x < k; x++) {
-		uint64_t gap_max = 2;
+		uint64_t gap_max = gap_bound == 0 ? 2 : gap_bound;
 		uint64_t gap_sz = 0;
 		// search between odd primes u and v
 		uint128_t u = (start + inc * (uint128_t) x) | 1;	// search lower bound
@@ -207,7 +230,7 @@ int main(int argc, char **argv)
 			t = search_forwards(t, v);
 			gap_sz = t - g;
 			if (gap_sz >= gap_max) {
-				gap_max = gap_sz;
+				gap_max = gap_bound == 0 ? gap_sz: gap_bound;
 #pragma omp critical
 				{
 					// this thread has found its own maximal gap,
