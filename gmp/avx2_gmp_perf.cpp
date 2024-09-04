@@ -14,8 +14,12 @@
 
 #include <gmp.h>
 #include "m128_utils.h"
+#include "m_reg.h"
 #include "optimized.h"
 #include "avx2_sprp.h"
+
+// little sieve for small constants and large numbers
+#include "divisibility.h"
 
 int main(int argc, char **argv)
 {
@@ -37,6 +41,7 @@ int main(int argc, char **argv)
 	mpz_init(xgmp);
 
 	// CSV header
+	printf("\"Bits\";");
 	printf("\"Prime AVX2\";");
 	printf("\"Prime GMP\";");
 	printf("\"Composite AVX2\";");
@@ -73,7 +78,6 @@ int main(int argc, char **argv)
 			my_printf(x);
 			printf("\n");
 		}
-
 		// --------------------------------------------------
 		// check the prime number
 		// --------------------------------------------------
@@ -82,13 +86,14 @@ int main(int argc, char **argv)
 		for (unsigned j = 0; j < 1000; j++) {
 			t = _rdtsc();
 			tavx -= t;
-			bavx =
-			    optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64)) ? avx2SprpTest((uint64_t) x,
-												 (uint64_t) (x >> 64)) : false;
+			bavx = (divisibility_sieve((uint64_t) x, (uint64_t) (x >> 64))
+				&& optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64))
+				&& avx2SprpTest((uint64_t) x, (uint64_t) (x >> 64)));
 			t = _rdtsc();
 			tavx += t;
 			tgmp -= t;
-			bgmp = (mpz_probab_prime_p(xgmp, 8) != 0);
+			// between 3 and 20 rounds
+			bgmp = !!mpz_probab_prime_p(xgmp, 3 + (17 * i) / 128);
 			t = _rdtsc();
 			tgmp += t;
 			if (bavx != bgmp) {
@@ -123,7 +128,6 @@ int main(int argc, char **argv)
 			my_printf(x);
 			printf("\n");
 		}
-
 		// --------------------------------------------------
 		// check the composite number
 		// --------------------------------------------------
@@ -132,13 +136,14 @@ int main(int argc, char **argv)
 		for (unsigned j = 0; j < 1000; j++) {
 			t = _rdtsc();
 			tavx -= t;
-			bavx =
-			    optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64)) ? avx2SprpTest((uint64_t) x,
-												 (uint64_t) (x >> 64)) : false;
+			bavx = (divisibility_sieve((uint64_t) x, (uint64_t) (x >> 64))
+				&& optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64))
+				&& avx2SprpTest((uint64_t) x, (uint64_t) (x >> 64)));
 			t = _rdtsc();
 			tavx += t;
 			tgmp -= t;
-			bgmp = (mpz_probab_prime_p(xgmp, 8) != 0);
+			// between 3 and 20 rounds
+			bgmp = !!mpz_probab_prime_p(xgmp, 3 + (17 * i) / 128);
 			t = _rdtsc();
 			tgmp += t;
 			if (bavx != bgmp) {

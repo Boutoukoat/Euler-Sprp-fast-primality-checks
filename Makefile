@@ -30,14 +30,14 @@ perf/barrett645: perf/barrett645.cpp m128_utils.h m128_utils.cpp m_reg.h
 tests/sanity_check: tests/sanity_check.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h
 	$(GGG) -o tests/sanity_check tests/sanity_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
 
-tests/gap_check: tests/gap_check.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel
-	$(GGG) -fopenmp=libomp -o tests/gap_check tests/gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
+tests/gap_check: tests/gap_check.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel tools/divisibility.cpp
+	$(GGG) -fopenmp=libomp -o tests/gap_check tests/gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp tools/divisibility.cpp
 
 tests/avx2_sanity_check: tests/avx2_sanity_check.cpp m128_utils.h m128_utils.cpp m_reg.h avx2_sprp.cpp avx2_sprp.h 
 	$(GGG) -o tests/avx2_sanity_check tests/avx2_sanity_check.cpp m128_utils.cpp
 
-tests/avx2_gap_check: tests/avx2_gap_check.cpp avx2_sprp.h avx2_sprp.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel
-	$(GGG) -fopenmp=libomp -o tests/avx2_gap_check avx2_sprp.cpp tests/avx2_gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp
+tests/avx2_gap_check: tests/avx2_gap_check.cpp avx2_sprp.h avx2_sprp.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel tools/divisibility.cpp
+	$(GGG) -fopenmp=libomp -o tests/avx2_gap_check avx2_sprp.cpp tests/avx2_gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp tools/divisibility.cpp
 
 tests/random_test: tests/random_test.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tools/generic.cpp tools/generic.h tools/slow.cpp tools/slow.h
 	$(GGG) -o tests/random_test tests/random_test.cpp m128_utils.cpp optimized65.cpp optimized128.cpp montgomery128.cpp tools/generic.cpp tools/slow.cpp
@@ -58,6 +58,8 @@ clean:
 	rm -f ./perf/fermat_perf ./perf/sprp_perf ./perf/generic_perf ./perf/barrett645
 	rm -f ./tests/random_test ./tests/sanity_check ./tests/gap_check
 	rm -f ./unit_tests/generic_tests unit_tests/m_reg_tests ./unit_tests/barrett_tests ./unit_tests/optimized65_tests
+	rm -f ./gmp/avx2_gmp_cmp ./gmp/avx2_gmp_perf ./tests/avx2_gap_check ./tests/avx2_sanity_check
+
 
 csv: perf/fermat_perf perf/sprp_perf perf/generic_perf 
 	perf/fermat_perf -csv | tee misc/fermat.csv

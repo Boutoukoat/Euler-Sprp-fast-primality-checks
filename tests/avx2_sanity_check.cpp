@@ -301,32 +301,32 @@ const char *pseudoprimes[] = {
 };
 
 static const char *square_root[] = {
-"0x3201",
-"0x55001",
-"0x80901",
-"0xd0201",
-"0x21c501",
-"0x37cb01",
-"0x677101",
-"0x1010101",
-"0x1d50e01",
-"0x2325301",
-"0x58b8701",
-"0xdbf2401",
-"0x15ee5001",
-"0x40014001",
-"0x5862e701",
-"0xbdde7201",
-"0x15a8fab01",
-"0x229cce601",
-"0x535f9ca01",
-"0xa63419001",
-"0x1a89771201",
-"0x2142355501",
-"0x655ec35801",
-"0xf43b5cd901",
-"0x1c5366edf01",
-"0x2188cfa8b01"
+	"0x3201",
+	"0x55001",
+	"0x80901",
+	"0xd0201",
+	"0x21c501",
+	"0x37cb01",
+	"0x677101",
+	"0x1010101",
+	"0x1d50e01",
+	"0x2325301",
+	"0x58b8701",
+	"0xdbf2401",
+	"0x15ee5001",
+	"0x40014001",
+	"0x5862e701",
+	"0xbdde7201",
+	"0x15a8fab01",
+	"0x229cce601",
+	"0x535f9ca01",
+	"0xa63419001",
+	"0x1a89771201",
+	"0x2142355501",
+	"0x655ec35801",
+	"0xf43b5cd901",
+	"0x1c5366edf01",
+	"0x2188cfa8b01"
 };
 
 static const char *composites[] = {
@@ -455,91 +455,91 @@ uint64_t self_tests(void)
 
 	// check endianness , different in C intrinsics vs. gdb vs. documentation.
 	__m256i e;
-       
- 	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+
+	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
 	assert(_mm256_extract_epi32(e, 0) == 0xf);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0xe);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 2) == 0xd);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 3) == 0xc);
-		check_count++;
- 	e = _mm256_blend_epi32(e, _mm256_setzero_si256(), 0xaa);
+	check_count++;
+	e = _mm256_blend_epi32(e, _mm256_setzero_si256(), 0xaa);
 	assert(_mm256_extract_epi32(e, 0) == 0xf);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0x0);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 2) == 0xd);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 3) == 0x0);
-		check_count++;
+	check_count++;
 
 	e = _mm256_set_epi64x(0x1, 0x2, 0x3, 0x4);
 	assert(_mm256_extract_epi32(e, 0) == 0x4);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0x0);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 2) == 0x3);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 3) == 0x0);
-		check_count++;
+	check_count++;
 
- 	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
-	e = _mm256_shuffle_epi32(e, _MM_SHUFFLE(3,3,1,1));
+	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+	e = _mm256_shuffle_epi32(e, _MM_SHUFFLE(3, 3, 1, 1));
 	assert(_mm256_extract_epi32(e, 0) == 0xe);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0xe);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 2) == 0xc);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 3) == 0xc);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 4) == 0xa);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 5) == 0xa);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 6) == 0x8);
-		check_count++;
+	check_count++;
 	assert(_mm256_extract_epi32(e, 7) == 0x8);
-		check_count++;
+	check_count++;
 
-		// check sprp exit conditions
+	// check sprp exit conditions
 	__m256i ma[1], mb[1], mask;
 	bool b;
 	uint32_t f;
 	mask = _mm256_setzero_si256();
-	ma[0] = _mm256_set_epi32(0, 1 , 0, 2, 0, 3, 0, 4);
-	mb[0] = _mm256_set_epi32(0, 8 , 0, 8, 0, 8, 0, 8);
+	ma[0] = _mm256_set_epi32(0, 1, 0, 2, 0, 3, 0, 4);
+	mb[0] = _mm256_set_epi32(0, 8, 0, 8, 0, 8, 0, 8);
 	b = avx2_cmp_next1(&mask, ma, mb);
 	assert(b == false);
-		check_count++;
+	check_count++;
 	f = _mm256_movemask_epi8(mask);
 	assert(f == 0xf0f0f0f0);
-		check_count++;
-	ma[0] = _mm256_set_epi32(0, 1 , 0, 8, 0, 3, 0, 4);
+	check_count++;
+	ma[0] = _mm256_set_epi32(0, 1, 0, 8, 0, 3, 0, 4);
 	b = avx2_cmp_next1(&mask, ma, mb);
 	assert(b == false);
-		check_count++;
+	check_count++;
 	f = _mm256_movemask_epi8(mask);
 	assert(f == 0xf0fff0f0);
-		check_count++;
-	ma[0] = _mm256_set_epi32(0, 2 , 0, 9, 0, 3, 0, 9);
-	mb[0] = _mm256_set_epi32(0, 9 , 0, 9, 0, 9, 0, 9);
+	check_count++;
+	ma[0] = _mm256_set_epi32(0, 2, 0, 9, 0, 3, 0, 9);
+	mb[0] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
 	b = avx2_neg_cmp_next1(&mask, ma, mb);
 	assert(b == true);
-		check_count++;
+	check_count++;
 
 	// safeguards 
 	b = avx2SprpTest(101, 0);
 	assert(b == true);
-		check_count++;
+	check_count++;
 	b = avx2SprpTest(103, 0);
 	assert(b == true);
-		check_count++;
+	check_count++;
 
 	return check_count;
-       
+
 }
 
 int main(int argc, char **argv)

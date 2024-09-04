@@ -211,7 +211,7 @@ void ciosModSquare(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uint64
 	cs = (uint128_t) m *mod_lo;	// #4
 	cs += t0;
 	cs = cs >> 64;
-	cs += m;	
+	cs += m;
 	cs += t1;
 	t0 = (uint64_t) cs;
 	cs = cs >> 64;
@@ -228,7 +228,7 @@ void ciosModSquare(uint64_t * res_lo, uint64_t * res_hi, uint64_t mod_lo, uint64
 	cs = (uint128_t) m *mod_lo;	// #7
 	cs += t0;
 	cs = cs >> 64;
-	cs += m;		
+	cs += m;
 	cs += t1;
 	t0 = (uint64_t) cs;
 	cs = cs >> 64;

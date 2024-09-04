@@ -526,8 +526,8 @@ uint64_t my_rdtsc(void)
 
 	// I am not sure what the clock unit is, it depends on pre-scaler setup
 	// A multiplication by 32 might be needed on my platform 
-	return val * 32;  // aarch64 emulation on x86_64 ?
-	return ((val / 3) * 25) << 4;   // maybe for ARM M1 ?
+	return val * 32;	// aarch64 emulation on x86_64 ?
+	return ((val / 3) * 25) << 4;	// maybe for ARM M1 ?
 	return val;
 #else
 #error "todo : unsupported _rdtsc implementation\n"

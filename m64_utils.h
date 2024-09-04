@@ -26,16 +26,27 @@ static inline uint64_t montgomeryInverse64(uint64_t mod_lo)
 	return 0 - x;
 }
 
+static inline uint32_t montgomeryInverse32(uint64_t mod_lo)
+{
+	uint32_t x = (3 * mod_lo) ^ 2;	// 5 bits acurate
+	uint32_t t = 1 - mod_lo * x;
+	x *= 1 + t;		// 10 bits accurate
+	t *= t;
+	x *= 1 + t;		// 20 bits accurate
+	t *= t;
+	x *= 1 + t;		// 40 bits accurate
+	return 0 - x;
+}
+
 #if 0
-// similar code, but slow because all multiplications are sequential
+// similar code, slow because all multiplications are dependent from the imediate previous one
 static inline uint64_t slow_montgomeryInverse64(uint64_t mod_lo)
 {
-uint64_t x = mod_lo + 2 * ((mod_lo +1) & 4) ;
-x = x * (2 - mod_lo * x);
-x = x * (2 - mod_lo * x);
-x = x * (2 - mod_lo * x);
-x = x * (2 - mod_lo * x);
-return 0 - x;
+	uint64_t x = mod_lo + 2 * ((mod_lo + 1) & 4);
+	x = x * (2 - mod_lo * x);
+	x = x * (2 - mod_lo * x);
+	x = x * (2 - mod_lo * x);
+	x = x * (2 - mod_lo * x);
+	return 0 - x;
 }
 #endif
-

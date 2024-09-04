@@ -310,18 +310,18 @@ bool ciosFermatTest128(uint64_t n_lo, uint64_t n_hi)
 
 	if (__builtin_constant_p(n_hi) && n_hi == 0) {
 		bit = 64 - my_clz64(n_lo);
-	uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
-	uint64_t msb_mask = (1 << msb_bits) - 1;
-	bit -= msb_bits;
-	my_shld64(&res_hi, &res_lo, (n_lo >> bit) & msb_mask);
+		uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+		uint64_t msb_mask = (1 << msb_bits) - 1;
+		bit -= msb_bits;
+		my_shld64(&res_hi, &res_lo, (n_lo >> bit) & msb_mask);
 
 	} else {
 		if (n_hi == 0) {
 			bit = 64 - my_clz64(n_lo);
-	uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
-	uint64_t msb_mask = (1 << msb_bits) - 1;
-	bit -= msb_bits;
-	my_shld64(&res_hi, &res_lo, (n_lo >> bit) & msb_mask);
+			uint64_t msb_bits = bit < 5 ? bit - 1 : 3;
+			uint64_t msb_mask = (1 << msb_bits) - 1;
+			bit -= msb_bits;
+			my_shld64(&res_hi, &res_lo, (n_lo >> bit) & msb_mask);
 
 		} else {
 			bit = 64 - my_clz64(n_hi);
@@ -560,9 +560,9 @@ bool ciosSprpTest128(uint64_t n_lo, uint64_t n_hi)
 		// square and reduce
 		ciosModSquare128(&res_lo, &res_hi, n_lo, n_hi, mmagic);
 		ciosSubtract128(&res_lo, &res_hi, n_lo, n_hi);
-	// if res == 1 return false;
-	if ((res_lo == one_lo) && (res_hi == one_hi))
-		return false;
+		// if res == 1 return false;
+		if ((res_lo == one_lo) && (res_hi == one_hi))
+			return false;
 
 	}
 	// if res == n-1 return true;
