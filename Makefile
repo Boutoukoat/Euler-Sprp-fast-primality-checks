@@ -7,7 +7,7 @@ GGG = clang++ -O3 -W -s -m64 -march=native -flto -fomit-frame-pointer -DPARANOID
 
 all: all_avx2 all_unit_tests all_tests all_perf
 
-all_unit_tests: unit_tests/m_reg_tests unit_tests/generic_tests unit_tests/barrett_tests unit_tests/optimized65_tests
+all_unit_tests: unit_tests/m_reg_tests unit_tests/generic_tests unit_tests/barrett_tests unit_tests/optimized65_tests unit_tests/divisibility_tests
 
 all_tests: tests/sanity_check tests/random_test tests/gap_check
 
@@ -45,6 +45,9 @@ tests/random_test: tests/random_test.cpp m128_utils.h m128_utils.cpp m_reg.h opt
 unit_tests/m_reg_tests: unit_tests/m_reg_tests.cpp m_reg.h
 	$(GGG) -o unit_tests/m_reg_tests unit_tests/m_reg_tests.cpp
 
+unit_tests/divisibility_tests: unit_tests/divisibility_tests.cpp m_reg.h tools/divisibility.cpp tools/divisibility.h
+	$(GGG) -o unit_tests/divisibility_tests unit_tests/divisibility_tests.cpp tools/divisibility.cpp
+
 unit_tests/generic_tests: unit_tests/generic_tests.cpp tools/generic.cpp m128_utils.h m128_utils.cpp tools/barrett.cpp tools/barrett.h tools/slow.cpp tools/slow.h
 	$(GGG) -o unit_tests/generic_tests unit_tests/generic_tests.cpp m128_utils.cpp tools/barrett.cpp tools/slow.cpp
 
@@ -57,7 +60,7 @@ unit_tests/optimized65_tests: unit_tests/optimized65_tests.cpp optimized65.cpp m
 clean:
 	rm -f ./perf/fermat_perf ./perf/sprp_perf ./perf/generic_perf ./perf/barrett645
 	rm -f ./tests/random_test ./tests/sanity_check ./tests/gap_check
-	rm -f ./unit_tests/generic_tests unit_tests/m_reg_tests ./unit_tests/barrett_tests ./unit_tests/optimized65_tests
+	rm -f ./unit_tests/generic_tests unit_tests/m_reg_tests ./unit_tests/barrett_tests ./unit_tests/optimized65_tests ./unit_tests/divisibility_tests
 	rm -f ./gmp/avx2_gmp_cmp ./gmp/avx2_gmp_perf ./tests/avx2_gap_check ./tests/avx2_sanity_check
 
 
@@ -77,12 +80,13 @@ zip:
 
 check: tests/sanity_check tests/random_test \
 	perf/fermat_perf perf/sprp_perf perf/generic_perf perf/barrett645 \
-	unit_tests/m_reg_tests unit_tests/generic_tests unit_tests/barrett_tests unit_tests/optimized65_tests
+	unit_tests/m_reg_tests unit_tests/generic_tests unit_tests/barrett_tests unit_tests/optimized65_tests unit_tests/divisibility_tests
 	# ----------------------------------------------------------
 	# Unit tests
 	# ----------------------------------------------------------
 	./unit_tests/m_reg_tests
 	./unit_tests/generic_tests
+	./unit_tests/divisibility_tests
 	./unit_tests/barrett_tests
 	./unit_tests/optimized65_tests
 	# ----------------------------------------------------------
