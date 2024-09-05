@@ -115,7 +115,7 @@ if ((uint64_t) (n * 0x2697cc8aef46c0f7ull) <= 0x0149539e3b2d066eull)
 bool divisibility_sieve(uint64_t t_lo, uint64_t t_hi)
 {
 	// skip small stooopid requests about 0, 1 and 2 being prime, or composite, or neither, or both.
-	if (t_lo > 128 || t_hi != 0) {
+	if (t_lo > 152 || t_hi != 0) {
 		uint64_t v_lo, v_hi;
 		// Use the factors of mersenne number 2^60-1 because the modular reduction is simple
 		// The factors of 2^60 - 1 are 3^2 * 5^2 * 7 * 11 * 13 * 31 * 41 * 61 * 151 * 331 * 1321
@@ -131,6 +131,17 @@ bool divisibility_sieve(uint64_t t_lo, uint64_t t_hi)
 		mod_mersenne_60 += v_lo;
 		// mod_mersenne_60 is a 62 bit number with the same factors than the input number v.
 		// i.e. gcd(2^60-1, mod_mersenne_60) == gcd(2^60-1, v)
+#if 0
+		// these potential factors 3,5,7,11 are already tested tru the wheel sieve.
+		if ((uint64_t) (n * 0xaaaaaaaaaaaaaaabull) <= 0x5555555555555555ull)
+			return false;	// divisible by 3
+		if ((uint64_t) (n * 0xcccccccccccccccdull) <= 0x3333333333333333ull)
+			return false;	// divisible by 5
+		if ((uint64_t) (n * 0x6db6db6db6db6db7ull) <= 0x2492492492492492ull)
+			return false;	// divisible by 7
+		if ((uint64_t) (n * 0x2e8ba2e8ba2e8ba3ull) <= 0x1745d1745d1745d1ull)
+			return false;	// divisible by 11
+#endif
 		if ((uint64_t) (mod_mersenne_60 * 0x4ec4ec4ec4ec4ec5ull) <= 0x13b13b13b13b13b1ull)
 			return false;	// divisible by 13
 		if ((uint64_t) (mod_mersenne_60 * 0xef7bdef7bdef7bdfull) <= 0x0842108421084210ull)
@@ -202,16 +213,22 @@ bool divisibility_sieve(uint64_t t_lo, uint64_t t_hi)
 
 		return true;	// might be prime
 	} else {
-
-		bool stooopid_table[] =
-		    { true, true, true, true, false, true, false, true, false, false, false, true, false, true, false, false, false,
-	true, false, true, false, false, false, true, false, false, false, false, false, true, false, true, false, false, false,
-	false, false, true, false, false, false, true, false, true, false, false, false, true, false, false, false, false, false,
-	true, false, false, false, false, false, true, false, true, false, false, false, false, false, true, false, false, false,
-	true, false, true, false, false, false, false, false, true, false, false, false, true, false, false, false, false, false,
-	true, false, false, false, false, false, false, false, true, false, false, false, true, false, true, false, false, false,
-	true, false, true, false, false, false, true, false, false, false, false, false, false, false, false, false, false, false,
-	false, false, true, false
+		// t_hi == 0 && t_lo <= 152
+		bool stooopid_table[] = {
+		true, true, true, true, false, true, false, true, false, false, false, true, false, true, false, false,
+		    false, true, false, true, false, false, false, true, false, false, false, false, false, true, false,
+		    true, false, false, false, false, false, true, false, false, false, true, false, true, false, false,
+		    false, true, false, false, false, false, false, true, false, false, false, false, false, true, false,
+		    true, false, false, false, false, false, true, false, false, false, true, false, true, false, false,
+		    false, false, false, true, false, false, false, true, false, false, false, false, false, true, false,
+		    false, false, false, false, false, false, true, false, false, false, true, false, true, false, false,
+		    false, true, false, true, false, false, false, true, false, false, false, false, false, false, false,
+		    false, false, false, false, false, false, true, false, false, false, true, false, false, false, false,
+		    false, true, false, true, false, false, false, false, false, false, false, false, false, true, false,
+		    true, false, false, false, false, false, true, false, false, false, false, false, true, false, false,
+		    false, true, false, false, false, false, false, true, false, false, false, false, false, true, false,
+		    true, false, false, false, false, false, false, false, false, false, true, false, true, false, false,
+		    false, true, false, true, false
 		};
 		return stooopid_table[t_lo];
 	}
