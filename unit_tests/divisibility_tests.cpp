@@ -2,93 +2,602 @@
 #include <string.h>
 #include <assert.h>
 
+#include "m128_utils.h"
 #include "divisibility.h"
 
 // random proven primes
-static uint64_t mersennes[] = { 521, 607, 1279, 2203, 2281, 3217, 4253, 4423, 9689, 9941, 11213, 19937, 21701, 23209, 44497, 86243, 110503, 132049, 216091, 756839, 859433, 1257787, 1398269, 2976221, 3021377, 6972593, 13466917, 20996011, 24036583, 25964951, 30402457, 32582657, 43112609, 57885161, 74207281, 77232917, 82589933 };
+static uint64_t mersennes[] =
+    { 521, 607, 1279, 2203, 2281, 3217, 4253, 4423, 9689, 9941, 11213, 19937, 21701, 23209, 44497, 86243, 110503, 132049, 216091,
+756839, 859433, 1257787, 1398269, 2976221, 3021377, 6972593, 13466917, 20996011, 24036583, 25964951, 30402457, 32582657, 43112609, 57885161,
+74207281, 77232917, 82589933 };
 
 static uint64_t factors[] = { 13, 31, 41, 61, 151, 17, 29, 43, 113, 127, 19, 37, 73, 109, 23, 89 };
 static uint64_t n_factors[] = { 49, 53, 59, 67, 101, 103 };
+
+static struct {
+	const char *str;
+	bool b;
+} bounds[] = {
+	{"0x00000000000000000000000000000007", true},
+	{"0x00000000000000000000000000000005", true},
+	{"0x00000000000000000000000000000009", false},
+	{"0x00000000000000000000000000000005", true},
+	{"0x0000000000000000000000000000000f", false},
+	{"0x0000000000000000000000000000000d", true},
+	{"0x00000000000000000000000000000011", true},
+	{"0x0000000000000000000000000000000d", true},
+	{"0x0000000000000000000000000000001f", true},
+	{"0x0000000000000000000000000000001d", true},
+	{"0x00000000000000000000000000000021", false},
+	{"0x0000000000000000000000000000001d", true},
+	{"0x0000000000000000000000000000003f", false},
+	{"0x0000000000000000000000000000003d", true},
+	{"0x00000000000000000000000000000041", false},
+	{"0x0000000000000000000000000000003d", true},
+	{"0x0000000000000000000000000000007f", true},
+	{"0x0000000000000000000000000000007d", false},
+	{"0x00000000000000000000000000000081", false},
+	{"0x0000000000000000000000000000007d", false},
+	{"0x000000000000000000000000000000ff", false},
+	{"0x000000000000000000000000000000fd", false},
+	{"0x00000000000000000000000000000101", true},
+	{"0x000000000000000000000000000000fd", false},
+	{"0x000000000000000000000000000001ff", false},
+	{"0x000000000000000000000000000001fd", true},
+	{"0x00000000000000000000000000000201", false},
+	{"0x000000000000000000000000000001fd", true},
+	{"0x000000000000000000000000000003ff", false},
+	{"0x000000000000000000000000000003fd", true},
+	{"0x00000000000000000000000000000401", false},
+	{"0x000000000000000000000000000003fd", true},
+	{"0x000000000000000000000000000007ff", false},
+	{"0x000000000000000000000000000007fd", true},
+	{"0x00000000000000000000000000000801", true},
+	{"0x000000000000000000000000000007fd", true},
+	{"0x00000000000000000000000000000fff", false},
+	{"0x00000000000000000000000000000ffd", true},
+	{"0x00000000000000000000000000001001", false},
+	{"0x00000000000000000000000000000ffd", true},
+	{"0x00000000000000000000000000001fff", true},
+	{"0x00000000000000000000000000001ffd", false},
+	{"0x00000000000000000000000000002001", true},
+	{"0x00000000000000000000000000001ffd", false},
+	{"0x00000000000000000000000000003fff", false},
+	{"0x00000000000000000000000000003ffd", true},
+	{"0x00000000000000000000000000004001", false},
+	{"0x00000000000000000000000000003ffd", true},
+	{"0x00000000000000000000000000007fff", false},
+	{"0x00000000000000000000000000007ffd", true},
+	{"0x00000000000000000000000000008001", true},
+	{"0x00000000000000000000000000007ffd", true},
+	{"0x0000000000000000000000000000ffff", false},
+	{"0x0000000000000000000000000000fffd", false},
+	{"0x00000000000000000000000000010001", true},
+	{"0x0000000000000000000000000000fffd", false},
+	{"0x0000000000000000000000000001ffff", true},
+	{"0x0000000000000000000000000001fffd", true},
+	{"0x00000000000000000000000000020001", true},
+	{"0x0000000000000000000000000001fffd", true},
+	{"0x0000000000000000000000000003ffff", false},
+	{"0x0000000000000000000000000003fffd", true},
+	{"0x00000000000000000000000000040001", false},
+	{"0x0000000000000000000000000003fffd", true},
+	{"0x0000000000000000000000000007ffff", true},
+	{"0x0000000000000000000000000007fffd", false},
+	{"0x00000000000000000000000000080001", true},
+	{"0x0000000000000000000000000007fffd", false},
+	{"0x000000000000000000000000000fffff", false},
+	{"0x000000000000000000000000000ffffd", true},
+	{"0x00000000000000000000000000100001", false},
+	{"0x000000000000000000000000000ffffd", true},
+	{"0x000000000000000000000000001fffff", false},
+	{"0x000000000000000000000000001ffffd", true},
+	{"0x00000000000000000000000000200001", false},
+	{"0x000000000000000000000000001ffffd", true},
+	{"0x000000000000000000000000003fffff", false},
+	{"0x000000000000000000000000003ffffd", true},
+	{"0x00000000000000000000000000400001", true},
+	{"0x000000000000000000000000003ffffd", true},
+	{"0x000000000000000000000000007fffff", true},
+	{"0x000000000000000000000000007ffffd", true},
+	{"0x00000000000000000000000000800001", true},
+	{"0x000000000000000000000000007ffffd", true},
+	{"0x00000000000000000000000000ffffff", false},
+	{"0x00000000000000000000000000fffffd", true},
+	{"0x00000000000000000000000001000001", true},
+	{"0x00000000000000000000000000fffffd", true},
+	{"0x00000000000000000000000001ffffff", false},
+	{"0x00000000000000000000000001fffffd", true},
+	{"0x00000000000000000000000002000001", true},
+	{"0x00000000000000000000000001fffffd", true},
+	{"0x00000000000000000000000003ffffff", true},
+	{"0x00000000000000000000000003fffffd", false},
+	{"0x00000000000000000000000004000001", true},
+	{"0x00000000000000000000000003fffffd", false},
+	{"0x00000000000000000000000007ffffff", false},
+	{"0x00000000000000000000000007fffffd", true},
+	{"0x00000000000000000000000008000001", false},
+	{"0x00000000000000000000000007fffffd", true},
+	{"0x0000000000000000000000000fffffff", false},
+	{"0x0000000000000000000000000ffffffd", false},
+	{"0x00000000000000000000000010000001", false},
+	{"0x0000000000000000000000000ffffffd", false},
+	{"0x0000000000000000000000001fffffff", true},
+	{"0x0000000000000000000000001ffffffd", true},
+	{"0x00000000000000000000000020000001", true},
+	{"0x0000000000000000000000001ffffffd", true},
+	{"0x0000000000000000000000003fffffff", false},
+	{"0x0000000000000000000000003ffffffd", false},
+	{"0x00000000000000000000000040000001", false},
+	{"0x0000000000000000000000003ffffffd", false},
+	{"0x0000000000000000000000007fffffff", true},
+	{"0x0000000000000000000000007ffffffd", false},
+	{"0x00000000000000000000000080000001", true},
+	{"0x0000000000000000000000007ffffffd", false},
+	{"0x000000000000000000000000ffffffff", false},
+	{"0x000000000000000000000000fffffffd", true},
+	{"0x00000000000000000000000100000001", true},
+	{"0x000000000000000000000000fffffffd", true},
+	{"0x000000000000000000000001ffffffff", false},
+	{"0x000000000000000000000001fffffffd", false},
+	{"0x00000000000000000000000200000001", true},
+	{"0x000000000000000000000001fffffffd", false},
+	{"0x000000000000000000000003ffffffff", true},
+	{"0x000000000000000000000003fffffffd", true},
+	{"0x00000000000000000000000400000001", true},
+	{"0x000000000000000000000003fffffffd", true},
+	{"0x000000000000000000000007ffffffff", false},
+	{"0x000000000000000000000007fffffffd", true},
+	{"0x00000000000000000000000800000001", false},
+	{"0x000000000000000000000007fffffffd", true},
+	{"0x00000000000000000000000fffffffff", false},
+	{"0x00000000000000000000000ffffffffd", true},
+	{"0x00000000000000000000001000000001", false},
+	{"0x00000000000000000000000ffffffffd", true},
+	{"0x00000000000000000000001fffffffff", true},
+	{"0x00000000000000000000001ffffffffd", true},
+	{"0x00000000000000000000002000000001", true},
+	{"0x00000000000000000000001ffffffffd", true},
+	{"0x00000000000000000000003fffffffff", true},
+	{"0x00000000000000000000003ffffffffd", true},
+	{"0x00000000000000000000004000000001", true},
+	{"0x00000000000000000000003ffffffffd", true},
+	{"0x00000000000000000000007fffffffff", true},
+	{"0x00000000000000000000007ffffffffd", true},
+	{"0x00000000000000000000008000000001", true},
+	{"0x00000000000000000000007ffffffffd", true},
+	{"0x0000000000000000000000ffffffffff", false},
+	{"0x0000000000000000000000fffffffffd", false},
+	{"0x00000000000000000000010000000001", true},
+	{"0x0000000000000000000000fffffffffd", false},
+	{"0x0000000000000000000001ffffffffff", true},
+	{"0x0000000000000000000001fffffffffd", false},
+	{"0x00000000000000000000020000000001", true},
+	{"0x0000000000000000000001fffffffffd", false},
+	{"0x0000000000000000000003ffffffffff", false},
+	{"0x0000000000000000000003fffffffffd", true},
+	{"0x00000000000000000000040000000001", false},
+	{"0x0000000000000000000003fffffffffd", true},
+	{"0x0000000000000000000007ffffffffff", true},
+	{"0x0000000000000000000007fffffffffd", true},
+	{"0x00000000000000000000080000000001", true},
+	{"0x0000000000000000000007fffffffffd", true},
+	{"0x000000000000000000000fffffffffff", false},
+	{"0x000000000000000000000ffffffffffd", true},
+	{"0x00000000000000000000100000000001", false},
+	{"0x000000000000000000000ffffffffffd", true},
+	{"0x000000000000000000001fffffffffff", false},
+	{"0x000000000000000000001ffffffffffd", true},
+	{"0x00000000000000000000200000000001", false},
+	{"0x000000000000000000001ffffffffffd", true},
+	{"0x000000000000000000003fffffffffff", true},
+	{"0x000000000000000000003ffffffffffd", true},
+	{"0x00000000000000000000400000000001", true},
+	{"0x000000000000000000003ffffffffffd", true},
+	{"0x000000000000000000007fffffffffff", true},
+	{"0x000000000000000000007ffffffffffd", true},
+	{"0x00000000000000000000800000000001", true},
+	{"0x000000000000000000007ffffffffffd", true},
+	{"0x00000000000000000000ffffffffffff", false},
+	{"0x00000000000000000000fffffffffffd", true},
+	{"0x00000000000000000001000000000001", true},
+	{"0x00000000000000000000fffffffffffd", true},
+	{"0x00000000000000000001ffffffffffff", false},
+	{"0x00000000000000000001fffffffffffd", false},
+	{"0x00000000000000000002000000000001", false},
+	{"0x00000000000000000001fffffffffffd", false},
+	{"0x00000000000000000003ffffffffffff", false},
+	{"0x00000000000000000003fffffffffffd", true},
+	{"0x00000000000000000004000000000001", false},
+	{"0x00000000000000000003fffffffffffd", true},
+	{"0x00000000000000000007ffffffffffff", true},
+	{"0x00000000000000000007fffffffffffd", true},
+	{"0x00000000000000000008000000000001", true},
+	{"0x00000000000000000007fffffffffffd", true},
+	{"0x0000000000000000000fffffffffffff", true},
+	{"0x0000000000000000000ffffffffffffd", false},
+	{"0x00000000000000000010000000000001", false},
+	{"0x0000000000000000000ffffffffffffd", false},
+	{"0x0000000000000000001fffffffffffff", true},
+	{"0x0000000000000000001ffffffffffffd", true},
+	{"0x00000000000000000020000000000001", true},
+	{"0x0000000000000000001ffffffffffffd", true},
+	{"0x0000000000000000003fffffffffffff", false},
+	{"0x0000000000000000003ffffffffffffd", true},
+	{"0x00000000000000000040000000000001", false},
+	{"0x0000000000000000003ffffffffffffd", true},
+	{"0x0000000000000000007fffffffffffff", false},
+	{"0x0000000000000000007ffffffffffffd", true},
+	{"0x00000000000000000080000000000001", true},
+	{"0x0000000000000000007ffffffffffffd", true},
+	{"0x000000000000000000ffffffffffffff", false},
+	{"0x000000000000000000fffffffffffffd", true},
+	{"0x00000000000000000100000000000001", true},
+	{"0x000000000000000000fffffffffffffd", true},
+	{"0x000000000000000001ffffffffffffff", true},
+	{"0x000000000000000001fffffffffffffd", true},
+	{"0x00000000000000000200000000000001", true},
+	{"0x000000000000000001fffffffffffffd", true},
+	{"0x000000000000000003ffffffffffffff", true},
+	{"0x000000000000000003fffffffffffffd", true},
+	{"0x00000000000000000400000000000001", true},
+	{"0x000000000000000003fffffffffffffd", true},
+	{"0x000000000000000007ffffffffffffff", true},
+	{"0x000000000000000007fffffffffffffd", true},
+	{"0x00000000000000000800000000000001", true},
+	{"0x000000000000000007fffffffffffffd", true},
+	{"0x00000000000000000fffffffffffffff", false},
+	{"0x00000000000000000ffffffffffffffd", true},
+	{"0x00000000000000001000000000000001", false},
+	{"0x00000000000000000ffffffffffffffd", true},
+	{"0x00000000000000001fffffffffffffff", true},
+	{"0x00000000000000001ffffffffffffffd", false},
+	{"0x00000000000000002000000000000001", true},
+	{"0x00000000000000001ffffffffffffffd", false},
+	{"0x00000000000000003fffffffffffffff", true},
+	{"0x00000000000000003ffffffffffffffd", false},
+	{"0x00000000000000004000000000000001", true},
+	{"0x00000000000000003ffffffffffffffd", false},
+	{"0x00000000000000007fffffffffffffff", false},
+	{"0x00000000000000007ffffffffffffffd", false},
+	{"0x00000000000000008000000000000001", false},
+	{"0x00000000000000007ffffffffffffffd", false},
+	{"0x0000000000000000ffffffffffffffff", false},
+	{"0x0000000000000000fffffffffffffffd", false},
+	{"0x00000000000000010000000000000001", true},
+	{"0x0000000000000000fffffffffffffffd", false},
+	{"0x0000000000000001ffffffffffffffff", false},
+	{"0x0000000000000001fffffffffffffffd", true},
+	{"0x00000000000000020000000000000001", true},
+	{"0x0000000000000001fffffffffffffffd", true},
+	{"0x0000000000000003ffffffffffffffff", false},
+	{"0x0000000000000003fffffffffffffffd", false},
+	{"0x00000000000000040000000000000001", false},
+	{"0x0000000000000003fffffffffffffffd", false},
+	{"0x0000000000000007ffffffffffffffff", true},
+	{"0x0000000000000007fffffffffffffffd", false},
+	{"0x00000000000000080000000000000001", true},
+	{"0x0000000000000007fffffffffffffffd", false},
+	{"0x000000000000000fffffffffffffffff", true},
+	{"0x000000000000000ffffffffffffffffd", true},
+	{"0x00000000000000100000000000000001", false},
+	{"0x000000000000000ffffffffffffffffd", true},
+	{"0x000000000000001fffffffffffffffff", true},
+	{"0x000000000000001ffffffffffffffffd", true},
+	{"0x00000000000000200000000000000001", true},
+	{"0x000000000000001ffffffffffffffffd", true},
+	{"0x000000000000003fffffffffffffffff", false},
+	{"0x000000000000003ffffffffffffffffd", true},
+	{"0x00000000000000400000000000000001", false},
+	{"0x000000000000003ffffffffffffffffd", true},
+	{"0x000000000000007fffffffffffffffff", true},
+	{"0x000000000000007ffffffffffffffffd", true},
+	{"0x00000000000000800000000000000001", true},
+	{"0x000000000000007ffffffffffffffffd", true},
+	{"0x00000000000000ffffffffffffffffff", false},
+	{"0x00000000000000fffffffffffffffffd", true},
+	{"0x00000000000001000000000000000001", true},
+	{"0x00000000000000fffffffffffffffffd", true},
+	{"0x00000000000001ffffffffffffffffff", true},
+	{"0x00000000000001fffffffffffffffffd", true},
+	{"0x00000000000002000000000000000001", true},
+	{"0x00000000000001fffffffffffffffffd", true},
+	{"0x00000000000003ffffffffffffffffff", true},
+	{"0x00000000000003fffffffffffffffffd", false},
+	{"0x00000000000004000000000000000001", true},
+	{"0x00000000000003fffffffffffffffffd", false},
+	{"0x00000000000007ffffffffffffffffff", false},
+	{"0x00000000000007fffffffffffffffffd", true},
+	{"0x00000000000008000000000000000001", true},
+	{"0x00000000000007fffffffffffffffffd", true},
+	{"0x0000000000000fffffffffffffffffff", true},
+	{"0x0000000000000ffffffffffffffffffd", false},
+	{"0x00000000000010000000000000000001", false},
+	{"0x0000000000000ffffffffffffffffffd", false},
+	{"0x0000000000001fffffffffffffffffff", false},
+	{"0x0000000000001ffffffffffffffffffd", true},
+	{"0x00000000000020000000000000000001", false},
+	{"0x0000000000001ffffffffffffffffffd", true},
+	{"0x0000000000003fffffffffffffffffff", true},
+	{"0x0000000000003ffffffffffffffffffd", true},
+	{"0x00000000000040000000000000000001", false},
+	{"0x0000000000003ffffffffffffffffffd", true},
+	{"0x0000000000007fffffffffffffffffff", true},
+	{"0x0000000000007ffffffffffffffffffd", true},
+	{"0x00000000000080000000000000000001", true},
+	{"0x0000000000007ffffffffffffffffffd", true},
+	{"0x000000000000ffffffffffffffffffff", false},
+	{"0x000000000000fffffffffffffffffffd", true},
+	{"0x00000000000100000000000000000001", true},
+	{"0x000000000000fffffffffffffffffffd", true},
+	{"0x000000000001ffffffffffffffffffff", false},
+	{"0x000000000001fffffffffffffffffffd", true},
+	{"0x00000000000200000000000000000001", false},
+	{"0x000000000001fffffffffffffffffffd", true},
+	{"0x000000000003ffffffffffffffffffff", true},
+	{"0x000000000003fffffffffffffffffffd", true},
+	{"0x00000000000400000000000000000001", true},
+	{"0x000000000003fffffffffffffffffffd", true},
+	{"0x000000000007ffffffffffffffffffff", true},
+	{"0x000000000007fffffffffffffffffffd", true},
+	{"0x00000000000800000000000000000001", true},
+	{"0x000000000007fffffffffffffffffffd", true},
+	{"0x00000000000fffffffffffffffffffff", false},
+	{"0x00000000000ffffffffffffffffffffd", true},
+	{"0x00000000001000000000000000000001", false},
+	{"0x00000000000ffffffffffffffffffffd", true},
+	{"0x00000000001fffffffffffffffffffff", false},
+	{"0x00000000001ffffffffffffffffffffd", false},
+	{"0x00000000002000000000000000000001", true},
+	{"0x00000000001ffffffffffffffffffffd", false},
+	{"0x00000000003fffffffffffffffffffff", true},
+	{"0x00000000003ffffffffffffffffffffd", true},
+	{"0x00000000004000000000000000000001", true},
+	{"0x00000000003ffffffffffffffffffffd", true},
+	{"0x00000000007fffffffffffffffffffff", true},
+	{"0x00000000007ffffffffffffffffffffd", true},
+	{"0x00000000008000000000000000000001", true},
+	{"0x00000000007ffffffffffffffffffffd", true},
+	{"0x0000000000ffffffffffffffffffffff", false},
+	{"0x0000000000fffffffffffffffffffffd", false},
+	{"0x00000000010000000000000000000001", true},
+	{"0x0000000000fffffffffffffffffffffd", false},
+	{"0x0000000001ffffffffffffffffffffff", true},
+	{"0x0000000001fffffffffffffffffffffd", false},
+	{"0x00000000020000000000000000000001", true},
+	{"0x0000000001fffffffffffffffffffffd", false},
+	{"0x0000000003ffffffffffffffffffffff", false},
+	{"0x0000000003fffffffffffffffffffffd", true},
+	{"0x00000000040000000000000000000001", false},
+	{"0x0000000003fffffffffffffffffffffd", true},
+	{"0x0000000007ffffffffffffffffffffff", false},
+	{"0x0000000007fffffffffffffffffffffd", true},
+	{"0x00000000080000000000000000000001", false},
+	{"0x0000000007fffffffffffffffffffffd", true},
+	{"0x000000000fffffffffffffffffffffff", true},
+	{"0x000000000ffffffffffffffffffffffd", true},
+	{"0x00000000100000000000000000000001", false},
+	{"0x000000000ffffffffffffffffffffffd", true},
+	{"0x000000001fffffffffffffffffffffff", true},
+	{"0x000000001ffffffffffffffffffffffd", true},
+	{"0x00000000200000000000000000000001", true},
+	{"0x000000001ffffffffffffffffffffffd", true},
+	{"0x000000003fffffffffffffffffffffff", true},
+	{"0x000000003ffffffffffffffffffffffd", true},
+	{"0x00000000400000000000000000000001", true},
+	{"0x000000003ffffffffffffffffffffffd", true},
+	{"0x000000007fffffffffffffffffffffff", false},
+	{"0x000000007ffffffffffffffffffffffd", true},
+	{"0x00000000800000000000000000000001", true},
+	{"0x000000007ffffffffffffffffffffffd", true},
+	{"0x00000000ffffffffffffffffffffffff", false},
+	{"0x00000000fffffffffffffffffffffffd", false},
+	{"0x00000001000000000000000000000001", true},
+	{"0x00000000fffffffffffffffffffffffd", false},
+	{"0x00000001ffffffffffffffffffffffff", true},
+	{"0x00000001fffffffffffffffffffffffd", true},
+	{"0x00000002000000000000000000000001", true},
+	{"0x00000001fffffffffffffffffffffffd", true},
+	{"0x00000003ffffffffffffffffffffffff", false},
+	{"0x00000003fffffffffffffffffffffffd", false},
+	{"0x00000004000000000000000000000001", false},
+	{"0x00000003fffffffffffffffffffffffd", false},
+	{"0x00000007ffffffffffffffffffffffff", false},
+	{"0x00000007fffffffffffffffffffffffd", true},
+	{"0x00000008000000000000000000000001", false},
+	{"0x00000007fffffffffffffffffffffffd", true},
+	{"0x0000000fffffffffffffffffffffffff", false},
+	{"0x0000000ffffffffffffffffffffffffd", false},
+	{"0x00000010000000000000000000000001", false},
+	{"0x0000000ffffffffffffffffffffffffd", false},
+	{"0x0000001fffffffffffffffffffffffff", true},
+	{"0x0000001ffffffffffffffffffffffffd", true},
+	{"0x00000020000000000000000000000001", true},
+	{"0x0000001ffffffffffffffffffffffffd", true},
+	{"0x0000003fffffffffffffffffffffffff", true},
+	{"0x0000003ffffffffffffffffffffffffd", true},
+	{"0x00000040000000000000000000000001", false},
+	{"0x0000003ffffffffffffffffffffffffd", true},
+	{"0x0000007fffffffffffffffffffffffff", true},
+	{"0x0000007ffffffffffffffffffffffffd", false},
+	{"0x00000080000000000000000000000001", true},
+	{"0x0000007ffffffffffffffffffffffffd", false},
+	{"0x000000ffffffffffffffffffffffffff", false},
+	{"0x000000fffffffffffffffffffffffffd", true},
+	{"0x00000100000000000000000000000001", true},
+	{"0x000000fffffffffffffffffffffffffd", true},
+	{"0x000001ffffffffffffffffffffffffff", false},
+	{"0x000001fffffffffffffffffffffffffd", true},
+	{"0x00000200000000000000000000000001", false},
+	{"0x000001fffffffffffffffffffffffffd", true},
+	{"0x000003ffffffffffffffffffffffffff", true},
+	{"0x000003fffffffffffffffffffffffffd", true},
+	{"0x00000400000000000000000000000001", true},
+	{"0x000003fffffffffffffffffffffffffd", true},
+	{"0x000007ffffffffffffffffffffffffff", true},
+	{"0x000007fffffffffffffffffffffffffd", false},
+	{"0x00000800000000000000000000000001", true},
+	{"0x000007fffffffffffffffffffffffffd", false},
+	{"0x00000fffffffffffffffffffffffffff", false},
+	{"0x00000ffffffffffffffffffffffffffd", true},
+	{"0x00001000000000000000000000000001", false},
+	{"0x00000ffffffffffffffffffffffffffd", true},
+	{"0x00001fffffffffffffffffffffffffff", true},
+	{"0x00001ffffffffffffffffffffffffffd", true},
+	{"0x00002000000000000000000000000001", true},
+	{"0x00001ffffffffffffffffffffffffffd", true},
+	{"0x00003fffffffffffffffffffffffffff", false},
+	{"0x00003ffffffffffffffffffffffffffd", true},
+	{"0x00004000000000000000000000000001", false},
+	{"0x00003ffffffffffffffffffffffffffd", true},
+	{"0x00007fffffffffffffffffffffffffff", true},
+	{"0x00007ffffffffffffffffffffffffffd", true},
+	{"0x00008000000000000000000000000001", true},
+	{"0x00007ffffffffffffffffffffffffffd", true},
+	{"0x0000ffffffffffffffffffffffffffff", false},
+	{"0x0000fffffffffffffffffffffffffffd", false},
+	{"0x00010000000000000000000000000001", true},
+	{"0x0000fffffffffffffffffffffffffffd", false},
+	{"0x0001ffffffffffffffffffffffffffff", true},
+	{"0x0001fffffffffffffffffffffffffffd", true},
+	{"0x00020000000000000000000000000001", true},
+	{"0x0001fffffffffffffffffffffffffffd", true},
+	{"0x0003ffffffffffffffffffffffffffff", true},
+	{"0x0003fffffffffffffffffffffffffffd", true},
+	{"0x00040000000000000000000000000001", false},
+	{"0x0003fffffffffffffffffffffffffffd", true},
+	{"0x0007ffffffffffffffffffffffffffff", false},
+	{"0x0007fffffffffffffffffffffffffffd", true},
+	{"0x00080000000000000000000000000001", true},
+	{"0x0007fffffffffffffffffffffffffffd", true},
+	{"0x000fffffffffffffffffffffffffffff", true},
+	{"0x000ffffffffffffffffffffffffffffd", true},
+	{"0x00100000000000000000000000000001", false},
+	{"0x000ffffffffffffffffffffffffffffd", true},
+	{"0x001fffffffffffffffffffffffffffff", false},
+	{"0x001ffffffffffffffffffffffffffffd", false},
+	{"0x00200000000000000000000000000001", false},
+	{"0x001ffffffffffffffffffffffffffffd", false},
+	{"0x003fffffffffffffffffffffffffffff", true},
+	{"0x003ffffffffffffffffffffffffffffd", false},
+	{"0x00400000000000000000000000000001", true},
+	{"0x003ffffffffffffffffffffffffffffd", false},
+	{"0x007fffffffffffffffffffffffffffff", false},
+	{"0x007ffffffffffffffffffffffffffffd", true},
+	{"0x00800000000000000000000000000001", false},
+	{"0x007ffffffffffffffffffffffffffffd", true},
+	{"0x00ffffffffffffffffffffffffffffff", false},
+	{"0x00fffffffffffffffffffffffffffffd", true},
+	{"0x01000000000000000000000000000001", true},
+	{"0x00fffffffffffffffffffffffffffffd", true},
+	{"0x01ffffffffffffffffffffffffffffff", false},
+	{"0x01fffffffffffffffffffffffffffffd", false},
+	{"0x02000000000000000000000000000001", true},
+	{"0x01fffffffffffffffffffffffffffffd", false},
+	{"0x03ffffffffffffffffffffffffffffff", true},
+	{"0x03fffffffffffffffffffffffffffffd", true},
+	{"0x04000000000000000000000000000001", true},
+	{"0x03fffffffffffffffffffffffffffffd", true},
+	{"0x07ffffffffffffffffffffffffffffff", true},
+	{"0x07fffffffffffffffffffffffffffffd", true},
+	{"0x08000000000000000000000000000001", true},
+	{"0x07fffffffffffffffffffffffffffffd", true},
+	{"0x0fffffffffffffffffffffffffffffff", true},
+	{"0x0ffffffffffffffffffffffffffffffd", false},
+	{"0x10000000000000000000000000000001", false},
+	{"0x0ffffffffffffffffffffffffffffffd", false},
+	{"0x1fffffffffffffffffffffffffffffff", false},
+	{"0x1ffffffffffffffffffffffffffffffd", true},
+	{"0x20000000000000000000000000000001", true},
+	{"0x1ffffffffffffffffffffffffffffffd", true},
+	{"0x3fffffffffffffffffffffffffffffff", false},
+	{"0x3ffffffffffffffffffffffffffffffd", false},
+	{"0x40000000000000000000000000000001", false},
+	{"0x3ffffffffffffffffffffffffffffffd", false}
+};
 
 int main(int argc, char **argv)
 {
 	bool verbose = false;
 	uint64_t check_count = 0;
 
-	for (int i = 1; i < argc; i++)
-	{
-		if (!strcmp(argv[i], "-v"))
-		{
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-v")) {
 			verbose = true;
 		}
 	}
 
 	// The divisibility code is full of constants from nowhere (described in compiler tech papers),
 	// better verify there is no corruption of one of the constants
-	
-	for (unsigned i = 0; i < sizeof(mersennes)/sizeof(mersennes[0]); i++)
-	{
+
+	for (unsigned i = 0; i < sizeof(mersennes) / sizeof(mersennes[0]); i++) {
 		// get 128 bit number with large factors
 		uint64_t m = mersennes[i];
 		m *= m;
 		uint128_t n = m;
 		n *= n;
 
-		for (unsigned j = 0; j < sizeof(factors)/sizeof(factors[0]); j++)
-		{
+		for (unsigned j = 0; j < sizeof(factors) / sizeof(factors[0]); j++) {
 			uint64_t t_lo, t_hi;
 			bool bb;
 			uint128_t t = n * factors[j];
-			t_lo = (uint64_t)t;
-			t_hi = (uint64_t)(t >> 64);
+			t_lo = (uint64_t) t;
+			t_hi = (uint64_t) (t >> 64);
 			bb = divisibility_sieve(t_lo, t_hi);
 			assert(bb == false);
 			check_count += 1;
 			t = n;
-			t_lo = (uint64_t)t;
-			t_hi = (uint64_t)(t >> 64);
+			t_lo = (uint64_t) t;
+			t_hi = (uint64_t) (t >> 64);
 			bb = divisibility_sieve(t_lo, t_hi);
 			assert(bb == true);
 			check_count += 1;
 			t = n * 3 * 5 * 7 * 11;
-			t_lo = (uint64_t)t;
-			t_hi = (uint64_t)(t >> 64);
+			t_lo = (uint64_t) t;
+			t_hi = (uint64_t) (t >> 64);
 			bb = divisibility_sieve(t_lo, t_hi);
 			assert(bb == true);
 			check_count += 1;
 			t = n * factors[j] * factors[j];
-			t_lo = (uint64_t)t;
-			t_hi = (uint64_t)(t >> 64);
+			t_lo = (uint64_t) t;
+			t_hi = (uint64_t) (t >> 64);
 			bb = divisibility_sieve(t_lo, t_hi);
 			assert(bb == false);
 			check_count += 1;
-			t = (uint128_t)1 << 127;
-			t_lo = (uint64_t)t;
-			t_hi = (uint64_t)(t >> 64);
+			t = (uint128_t) 1 << 127;
+			t_lo = (uint64_t) t;
+			t_hi = (uint64_t) (t >> 64);
 			bb = divisibility_sieve(t_lo, t_hi);
 			assert(bb == true);
 			check_count += 1;
 		}
-		for (unsigned j = 0; j < sizeof(n_factors)/sizeof(n_factors[0]); j++)
-		{
+		for (unsigned j = 0; j < sizeof(n_factors) / sizeof(n_factors[0]); j++) {
 			uint64_t t_lo, t_hi;
 			bool bb;
 			uint128_t t = n * n_factors[j];
-			t_lo = (uint64_t)t;
-			t_hi = (uint64_t)(t >> 64);
+			t_lo = (uint64_t) t;
+			t_hi = (uint64_t) (t >> 64);
 			bb = divisibility_sieve(t_lo, t_hi);
 			assert(bb == true);
 			check_count += 1;
 		}
-		if (verbose)
-		{
+		if (verbose) {
 			printf("%lu tests passed\n", check_count);
 		}
+	}
+
+	for (unsigned j = 0; j < sizeof(bounds) / sizeof(bounds[0]); j++) {
+		uint64_t t_lo, t_hi;
+		bool bb;
+		uint128_t t = convert128(bounds[j].str);
+		t_lo = (uint64_t) t;
+		t_hi = (uint64_t) (t >> 64);
+		bb = divisibility_sieve(t_lo, t_hi);
+		assert(bb == bounds[j].b);
+		check_count += 1;
 	}
 
 	printf("%lu tests passed\n", check_count);
 	printf("All tests passed\n");
 	return 0;
 }
-
-

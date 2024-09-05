@@ -45,8 +45,8 @@ tests/random_test: tests/random_test.cpp m128_utils.h m128_utils.cpp m_reg.h opt
 unit_tests/m_reg_tests: unit_tests/m_reg_tests.cpp m_reg.h
 	$(GGG) -o unit_tests/m_reg_tests unit_tests/m_reg_tests.cpp
 
-unit_tests/divisibility_tests: unit_tests/divisibility_tests.cpp m_reg.h tools/divisibility.cpp tools/divisibility.h
-	$(GGG) -o unit_tests/divisibility_tests unit_tests/divisibility_tests.cpp tools/divisibility.cpp
+unit_tests/divisibility_tests: unit_tests/divisibility_tests.cpp m_reg.h tools/divisibility.cpp tools/divisibility.h m128_utils.h m128_utils.cpp
+	$(GGG) -o unit_tests/divisibility_tests unit_tests/divisibility_tests.cpp tools/divisibility.cpp m128_utils.cpp
 
 unit_tests/generic_tests: unit_tests/generic_tests.cpp tools/generic.cpp m128_utils.h m128_utils.cpp tools/barrett.cpp tools/barrett.h tools/slow.cpp tools/slow.h
 	$(GGG) -o unit_tests/generic_tests unit_tests/generic_tests.cpp m128_utils.cpp tools/barrett.cpp tools/slow.cpp
