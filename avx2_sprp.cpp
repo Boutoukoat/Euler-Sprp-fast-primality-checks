@@ -9,18 +9,18 @@
 #include "m128_utils.h"
 #include "m64_utils.h"
 
+#ifdef __AVX2__
+
 // -----------------------------------------------------------------------------------
 
 static inline __attribute__((always_inline))
 void avx2_modsubtract1(__m256i * mr, __m256i mp[1])
 {
-	__m256i t[1], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[1], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
-	cs1 = _mm256_and_si256(cs, mr[0]);
-	cs2 = _mm256_andnot_si256(cs, t[0]);
-	mr[0] = _mm256_or_si256(cs1, cs2);
+	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
 }
 
 // -----------------------------------------------------------------------------------
@@ -28,11 +28,12 @@ void avx2_modsubtract1(__m256i * mr, __m256i mp[1])
 static inline __attribute__((always_inline))
 void avx2_modsubtract21(__m256i * mr, __m256i mc, __m256i mp[1])
 {
-	__m256i t[1], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[1], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	cs = _mm256_add_epi64(cs, mc);
+	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
 }
 
@@ -179,7 +180,7 @@ bool avx2_sprp1(uint32_t v, uint32_t mm, uint32_t on, uint32_t * bases)
 static inline __attribute__((always_inline))
 void avx2_modsubtract2(__m256i * mr, __m256i mp[2])
 {
-	__m256i t[2], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[2], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
@@ -187,12 +188,8 @@ void avx2_modsubtract2(__m256i * mr, __m256i mp[2])
 	cs = _mm256_sub_epi64(cs, mp[1]);
 	t[1] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
-	cs1 = _mm256_and_si256(cs, mr[0]);
-	cs2 = _mm256_andnot_si256(cs, t[0]);
-	mr[0] = _mm256_or_si256(cs1, cs2);
-	cs1 = _mm256_and_si256(cs, mr[1]);
-	cs2 = _mm256_andnot_si256(cs, t[1]);
-	mr[1] = _mm256_or_si256(cs1, cs2);
+	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
+	mr[1] = _mm256_blendv_epi8(t[1], mr[1], cs);
 }
 
 // -----------------------------------------------------------------------------------
@@ -200,7 +197,7 @@ void avx2_modsubtract2(__m256i * mr, __m256i mp[2])
 static inline __attribute__((always_inline))
 void avx2_modsubtract32(__m256i * mr, __m256i mc, __m256i mp[2])
 {
-	__m256i t[2], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[2], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
@@ -209,6 +206,7 @@ void avx2_modsubtract32(__m256i * mr, __m256i mc, __m256i mp[2])
 	t[1] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	cs = _mm256_add_epi64(cs, mc);
+	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
 	mr[1] = _mm256_blendv_epi8(t[1], mr[1], cs);
 }
@@ -449,7 +447,7 @@ bool avx2_sprp2(uint64_t v, uint32_t mm, uint64_t on, uint64_t * bases)
 static inline __attribute__((always_inline))
 void avx2_modsubtract3(__m256i * mr, __m256i mp[3])
 {
-	__m256i t[3], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[3], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
@@ -461,15 +459,9 @@ void avx2_modsubtract3(__m256i * mr, __m256i mp[3])
 	cs = _mm256_sub_epi64(cs, mp[2]);
 	t[2] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
-	cs1 = _mm256_and_si256(cs, mr[0]);
-	cs2 = _mm256_andnot_si256(cs, t[0]);
-	mr[0] = _mm256_or_si256(cs1, cs2);
-	cs1 = _mm256_and_si256(cs, mr[1]);
-	cs2 = _mm256_andnot_si256(cs, t[1]);
-	mr[1] = _mm256_or_si256(cs1, cs2);
-	cs1 = _mm256_and_si256(cs, mr[2]);
-	cs2 = _mm256_andnot_si256(cs, t[2]);
-	mr[2] = _mm256_or_si256(cs1, cs2);
+	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
+	mr[1] = _mm256_blendv_epi8(t[1], mr[1], cs);
+	mr[2] = _mm256_blendv_epi8(t[2], mr[2], cs);
 }
 
 // -----------------------------------------------------------------------------------
@@ -477,7 +469,7 @@ void avx2_modsubtract3(__m256i * mr, __m256i mp[3])
 static inline __attribute__((always_inline))
 void avx2_modsubtract43(__m256i * mr, __m256i mc, __m256i mp[3])
 {
-	__m256i t[3], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[3], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
@@ -490,6 +482,7 @@ void avx2_modsubtract43(__m256i * mr, __m256i mc, __m256i mp[3])
 	t[2] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	cs = _mm256_add_epi64(cs, mc);
+	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
 	mr[1] = _mm256_blendv_epi8(t[1], mr[1], cs);
 	mr[2] = _mm256_blendv_epi8(t[2], mr[2], cs);
@@ -856,7 +849,7 @@ bool avx2_sprp3(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases)
 static inline __attribute__((always_inline))
 void avx2_modsubtract4(__m256i * mr, __m256i mp[4])
 {
-	__m256i t[4], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[4], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
@@ -872,18 +865,10 @@ void avx2_modsubtract4(__m256i * mr, __m256i mp[4])
 	cs = _mm256_sub_epi64(cs, mp[3]);
 	t[3] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
-	cs1 = _mm256_and_si256(cs, mr[0]);
-	cs2 = _mm256_andnot_si256(cs, t[0]);
-	mr[0] = _mm256_or_si256(cs1, cs2);
-	cs1 = _mm256_and_si256(cs, mr[1]);
-	cs2 = _mm256_andnot_si256(cs, t[1]);
-	mr[1] = _mm256_or_si256(cs1, cs2);
-	cs1 = _mm256_and_si256(cs, mr[2]);
-	cs2 = _mm256_andnot_si256(cs, t[2]);
-	mr[2] = _mm256_or_si256(cs1, cs2);
-	cs1 = _mm256_and_si256(cs, mr[3]);
-	cs2 = _mm256_andnot_si256(cs, t[3]);
-	mr[3] = _mm256_or_si256(cs1, cs2);
+	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
+	mr[1] = _mm256_blendv_epi8(t[1], mr[1], cs);
+	mr[2] = _mm256_blendv_epi8(t[2], mr[2], cs);
+	mr[3] = _mm256_blendv_epi8(t[3], mr[3], cs);
 }
 
 // -----------------------------------------------------------------------------------
@@ -891,7 +876,7 @@ void avx2_modsubtract4(__m256i * mr, __m256i mp[4])
 static inline __attribute__((always_inline))
 void avx2_modsubtract54(__m256i * mr, __m256i mc, __m256i mp[4])
 {
-	__m256i t[4], cs, cs1, cs2, zero = _mm256_setzero_si256();
+	__m256i t[4], cs, zero = _mm256_setzero_si256();
 	cs = _mm256_sub_epi64(mr[0], mp[0]);
 	t[0] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
@@ -908,6 +893,7 @@ void avx2_modsubtract54(__m256i * mr, __m256i mc, __m256i mp[4])
 	t[3] = _mm256_blend_epi32(cs, zero, 0xaa);
 	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	cs = _mm256_add_epi64(cs, mc);
+	cs = _mm256_shuffle_epi32(cs, _MM_SHUFFLE(3, 3, 1, 1));
 	mr[0] = _mm256_blendv_epi8(t[0], mr[0], cs);
 	mr[1] = _mm256_blendv_epi8(t[1], mr[1], cs);
 	mr[2] = _mm256_blendv_epi8(t[2], mr[2], cs);
@@ -1434,6 +1420,8 @@ bool avx2_sprp4(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases)
 	return false;
 }
 
+#endif				// avx2
+
 // -----------------------------------------------------------------------------------
 
 #define BASES(type, count, mod, var, exp)\
@@ -1589,6 +1577,13 @@ uint128_t montgomery_bases4(uint128_t * montg_bases, uint128_t v, uint64_t count
 	BASES(uint128_t, 18, v, t71, t29 + t31 + t11);
 	BASES(uint128_t, 19, v, t73, t29 + t31 + t13);
 	if (count <= 20)
+		return t1;
+
+	BASES(uint128_t, 20, v, t79, t29 + t31 + t19);
+	BASES(uint128_t, 21, v, t83, t29 + t31 + t23);
+	BASES(uint128_t, 22, v, t89, t29 + t31 + t29);
+	BASES(uint128_t, 23, v, t97, t29 + t31 + t37);
+	if (count <= 24)
 		return t1;
 
 	return t1;

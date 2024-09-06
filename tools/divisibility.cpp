@@ -17,6 +17,8 @@
 //
 // if ((uint64_t)(n * 0xa6c0964fda6c0965ull) <= 0x02593f69b02593f6ull) return false; // divisible by 109
 //
+// This function return false when the input number is composite for sure, and return true in other cases.
+//
 // ------------------------------------------------------------------------
 //
 #if 0
@@ -132,7 +134,7 @@ bool divisibility_sieve(uint64_t t_lo, uint64_t t_hi)
 		// mod_mersenne_60 is a 62 bit number with the same factors than the input number v.
 		// i.e. gcd(2^60-1, mod_mersenne_60) == gcd(2^60-1, v)
 #if 0
-		// these potential factors 3,5,7,11 are already tested tru the wheel sieve.
+		// these possible factors 3,5,7,11 are already tested tru the wheel sieve.
 		if ((uint64_t) (n * 0xaaaaaaaaaaaaaaabull) <= 0x5555555555555555ull)
 			return false;	// divisible by 3
 		if ((uint64_t) (n * 0xcccccccccccccccdull) <= 0x3333333333333333ull)
@@ -214,7 +216,8 @@ bool divisibility_sieve(uint64_t t_lo, uint64_t t_hi)
 		return true;	// might be prime
 	} else {
 		// t_hi == 0 && t_lo <= 152
-		bool stooopid_table[] = {
+		// return false for small numbers which are composite for sure , without checking further.
+		bool stooopid_prime_table[] = {
 		true, true, true, true, false, true, false, true, false, false, false, true, false, true, false, false,
 		    false, true, false, true, false, false, false, true, false, false, false, false, false, true, false,
 		    true, false, false, false, false, false, true, false, false, false, true, false, true, false, false,
@@ -230,6 +233,6 @@ bool divisibility_sieve(uint64_t t_lo, uint64_t t_hi)
 		    true, false, false, false, false, false, false, false, false, false, true, false, true, false, false,
 		    false, true, false, true, false
 		};
-		return stooopid_table[t_lo];
+		return stooopid_prime_table[t_lo];
 	}
 }

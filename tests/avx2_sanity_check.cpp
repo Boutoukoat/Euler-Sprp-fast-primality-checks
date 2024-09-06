@@ -449,11 +449,11 @@ static const char *composites[] = {
 	"0xd9078d3e1214b2477115a9793bf90621"
 };
 
-uint64_t self_tests(void)
+static uint64_t self_tests(void)
 {
 	uint64_t check_count = 0;
 
-	// check endianness , different in C intrinsics vs. gdb vs. documentation.
+	// check endianness , different in C intrinsics vs. gdb display vs. documentation vs. memory layout.
 	__m256i e;
 
 	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
@@ -528,6 +528,53 @@ uint64_t self_tests(void)
 	mb[0] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
 	b = avx2_neg_cmp_next1(&mask, ma, mb);
 	assert(b == true);
+	check_count++;
+
+	// check subtract
+	__m256i mx[2], my[2], mc;
+	mx[0] = _mm256_set_epi32(0, 2, 0, 2, 0, 3, 0, 3);
+	my[0] = _mm256_set_epi32(0, 3, 0, 3, 0, 2, 0, 2);
+	mx[1] = _mm256_set_epi32(0, 8, 0, 9, 0, 8, 0, 9);
+	my[1] = _mm256_set_epi32(0, 9, 0, 8, 0, 9, 0, 8);
+	avx2_subtract2(mx, mx,my);
+	assert(_mm256_extract_epi32(mx[0], 0) == 0x1);
+	check_count++;
+	assert(_mm256_extract_epi32(mx[0], 2) == 0x1);
+	check_count++;
+	assert((uint32_t)_mm256_extract_epi32(mx[0], 4) == (uint32_t)0xffffffff);
+	check_count++;
+	assert((uint32_t)_mm256_extract_epi32(mx[0], 6) == (uint32_t)0xffffffff);
+	check_count++;
+
+	// check modular subtract
+	mx[0] = _mm256_set_epi32(0, 2, 0, 2, 0, 3, 0, 3);
+	my[0] = _mm256_set_epi32(0, 3, 0, 3, 0, 2, 0, 2);
+	mx[1] = _mm256_set_epi32(0, 8, 0, 9, 0, 8, 0, 9);
+	my[1] = _mm256_set_epi32(0, 9, 0, 8, 0, 9, 0, 8);
+	avx2_modsubtract2(mx,my);
+	assert(_mm256_extract_epi32(mx[0], 0) == 0x1);
+	check_count++;
+	assert(_mm256_extract_epi32(mx[0], 2) == 0x3);
+	check_count++;
+	assert((uint32_t)_mm256_extract_epi32(mx[0], 4) == (uint32_t)0xffffffff);
+	check_count++;
+	assert(_mm256_extract_epi32(mx[0], 6) == 0x2);
+	check_count++;
+
+	// check modular subtract with carry
+	mx[0] = _mm256_set_epi32(0, 2, 0, 2, 0, 3, 0, 3);
+	my[0] = _mm256_set_epi32(0, 3, 0, 3, 0, 2, 0, 2);
+	mx[1] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
+	my[1] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
+	mc    = _mm256_set_epi32(0, 0, 0, 1, 0, 0, 0, 1);
+	avx2_modsubtract32(mx,mc, my);
+	assert(_mm256_extract_epi32(mx[0], 0) == 0x1);
+	check_count++;
+	assert(_mm256_extract_epi32(mx[0], 2) == 0x1);
+	check_count++;
+	assert((uint32_t)_mm256_extract_epi32(mx[0], 4) == (uint32_t)0xffffffff);
+	check_count++;
+	assert(_mm256_extract_epi32(mx[0], 6) == 0x2);
 	check_count++;
 
 	// safeguards 
