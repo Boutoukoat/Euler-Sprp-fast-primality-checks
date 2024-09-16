@@ -452,11 +452,18 @@ static const char *composites[] = {
 static uint64_t self_tests(void)
 {
 	uint64_t check_count = 0;
+	bool b;
+
+#ifdef __AVX512F__
 
 	// check endianness , different in C intrinsics vs. gdb display vs. documentation vs. memory layout.
+	__m512i g;
 	__m256i e;
+	__mmask16 k = 0x5555;
 
-	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+	g = _mm512_set_epi32(1,2,3,4,5,6,7,8, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+	e = _mm512_extracti32x8_epi32(g, 0);
+
 	assert(_mm256_extract_epi32(e, 0) == 0xf);
 	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0xe);
@@ -465,7 +472,10 @@ static uint64_t self_tests(void)
 	check_count++;
 	assert(_mm256_extract_epi32(e, 3) == 0xc);
 	check_count++;
-	e = _mm256_blend_epi32(e, _mm256_setzero_si256(), 0xaa);
+
+	g = _mm512_maskz_shuffle_epi32(k, g, _MM_PERM_DCBA);
+	e = _mm512_extracti32x8_epi32(g, 0);
+
 	assert(_mm256_extract_epi32(e, 0) == 0xf);
 	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0x0);
@@ -475,7 +485,8 @@ static uint64_t self_tests(void)
 	assert(_mm256_extract_epi32(e, 3) == 0x0);
 	check_count++;
 
-	e = _mm256_set_epi64x(0x1, 0x2, 0x3, 0x4);
+	g = _mm512_set_epi64(0xa, 0xb, 0xc, 0xd, 0x1, 0x2, 0x3, 0x4);
+	e = _mm512_extracti32x8_epi32(g, 0);
 	assert(_mm256_extract_epi32(e, 0) == 0x4);
 	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0x0);
@@ -485,8 +496,9 @@ static uint64_t self_tests(void)
 	assert(_mm256_extract_epi32(e, 3) == 0x0);
 	check_count++;
 
-	e = _mm256_set_epi32(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
-	e = _mm256_shuffle_epi32(e, _MM_SHUFFLE(3, 3, 1, 1));
+	g = _mm512_set_epi32(1,2,3,4,5,6,7,8, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf);
+	g = _mm512_shuffle_epi32(g, _MM_PERM_DDBB);
+	e = _mm512_extracti32x8_epi32(g, 0);
 	assert(_mm256_extract_epi32(e, 0) == 0xe);
 	check_count++;
 	assert(_mm256_extract_epi32(e, 1) == 0xe);
@@ -503,87 +515,110 @@ static uint64_t self_tests(void)
 	check_count++;
 	assert(_mm256_extract_epi32(e, 7) == 0x8);
 	check_count++;
+	e = _mm512_extracti32x8_epi32(g, 1);
+	assert(_mm256_extract_epi32(e, 0) == 0x7);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 1) == 0x7);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 2) == 0x5);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 3) == 0x5);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 4) == 0x3);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 5) == 0x3);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 6) == 0x1);
+	check_count++;
+	assert(_mm256_extract_epi32(e, 7) == 0x1);
+	check_count++;
 
 	// check sprp exit conditions
-	__m256i ma[1], mb[1], mask;
-	bool b;
-	uint32_t f;
-	mask = _mm256_setzero_si256();
-	ma[0] = _mm256_set_epi32(0, 1, 0, 2, 0, 3, 0, 4);
-	mb[0] = _mm256_set_epi32(0, 8, 0, 8, 0, 8, 0, 8);
-	b = avx2_cmp_next1(&mask, ma, mb);
+	uint64_t mask;
+	__m512i ma[1], mb[1];
+	mask = 0;
+	ma[0] = _mm512_set_epi32(0,1,0,2,0,3,0,4, 0, 1, 0, 2, 0, 3, 0, 4);
+	mb[0] = _mm512_set_epi32(0,8,0,8,0,8,0,8, 0, 8, 0, 8, 0, 8, 0, 8);
+	b = avx512_cmp_next1(&mask, ma, mb);
 	assert(b == false);
 	check_count++;
-	f = _mm256_movemask_epi8(mask);
-	assert(f == 0x0);
+	assert(mask == 0x00);
 	check_count++;
-	ma[0] = _mm256_set_epi32(0, 1, 0, 8, 0, 3, 0, 4);
-	b = avx2_cmp_next1(&mask, ma, mb);
+	ma[0] = _mm512_set_epi32(0,1,0,2,0,3,0,4, 0, 1, 0, 8, 0, 3, 0, 4);
+	b = avx512_cmp_next1(&mask, ma, mb);
 	assert(b == false);
 	check_count++;
-	f = _mm256_movemask_epi8(mask);
-	assert(f == 0x00ff0000);
+	assert(mask == 0x04);
 	check_count++;
-	ma[0] = _mm256_set_epi32(0, 2, 0, 9, 0, 3, 0, 9);
-	mb[0] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
-	b = avx2_neg_cmp_next1(&mask, ma, mb);
+	ma[0] = _mm512_set_epi32(0,2,0,9,0,3,0,9, 0, 2, 0, 9, 0, 3, 0, 9);
+	mb[0] = _mm512_set_epi32(0,9,0,9,0,9,0,9, 0, 9, 0, 9, 0, 9, 0, 9);
+	b = avx512_neg_cmp_next1(&mask, ma, mb);
 	assert(b == true);
 	check_count++;
 
 	// check subtract
-	__m256i mx[2], my[2], mc;
-	mx[0] = _mm256_set_epi32(0, 2, 0, 2, 0, 3, 0, 3);
-	my[0] = _mm256_set_epi32(0, 3, 0, 3, 0, 2, 0, 2);
-	mx[1] = _mm256_set_epi32(0, 8, 0, 9, 0, 8, 0, 9);
-	my[1] = _mm256_set_epi32(0, 9, 0, 8, 0, 9, 0, 8);
-	avx2_subtract2(mx, mx,my);
-	assert(_mm256_extract_epi32(mx[0], 0) == 0x1);
+	__m512i mx[2], my[2], mc;
+	mx[0] = _mm512_set_epi32(0,2,0,2,0,3,0,3,0, 2, 0, 2, 0, 3, 0, 3);
+	my[0] = _mm512_set_epi32(0,3,0,3,0,2,0,2,0, 3, 0, 3, 0, 2, 0, 2);
+	mx[1] = _mm512_set_epi32(0,8,0,9,0,8,0,9,0, 8, 0, 9, 0, 8, 0, 9);
+	my[1] = _mm512_set_epi32(0,9,0,8,0,9,0,8,0, 9, 0, 8, 0, 9, 0, 8);
+	avx512_subtract2(mx, mx,my);
+	e = _mm512_extracti32x8_epi32(mx[0], 0);
+	assert(_mm256_extract_epi32(e, 0) == 0x1);
 	check_count++;
-	assert(_mm256_extract_epi32(mx[0], 2) == 0x1);
+	assert(_mm256_extract_epi32(e, 2) == 0x1);
 	check_count++;
-	assert((uint32_t)_mm256_extract_epi32(mx[0], 4) == (uint32_t)0xffffffff);
+	assert((uint32_t)_mm256_extract_epi32(e, 4) == (uint32_t)0xffffffff);
 	check_count++;
-	assert((uint32_t)_mm256_extract_epi32(mx[0], 6) == (uint32_t)0xffffffff);
+	assert((uint32_t)_mm256_extract_epi32(e, 6) == (uint32_t)0xffffffff);
 	check_count++;
 
 	// check modular subtract
-	mx[0] = _mm256_set_epi32(0, 2, 0, 2, 0, 3, 0, 3);
-	my[0] = _mm256_set_epi32(0, 3, 0, 3, 0, 2, 0, 2);
-	mx[1] = _mm256_set_epi32(0, 8, 0, 9, 0, 8, 0, 9);
-	my[1] = _mm256_set_epi32(0, 9, 0, 8, 0, 9, 0, 8);
-	avx2_modsubtract2(mx,my);
-	assert(_mm256_extract_epi32(mx[0], 0) == 0x1);
+	mx[0] = _mm512_set_epi32(0,2,0,2,0,3,0,3,0, 2, 0, 2, 0, 3, 0, 3);
+	my[0] = _mm512_set_epi32(0,3,0,3,0,2,0,2,0, 3, 0, 3, 0, 2, 0, 2);
+	mx[1] = _mm512_set_epi32(0,8,0,9,0,8,0,9,0, 8, 0, 9, 0, 8, 0, 9);
+	my[1] = _mm512_set_epi32(0,9,0,8,0,9,0,8,0, 9, 0, 8, 0, 9, 0, 8);
+	avx512_modsubtract2(mx,my);
+	e = _mm512_extracti32x8_epi32(mx[0], 0);
+	assert(_mm256_extract_epi32(e, 0) == 0x1);
 	check_count++;
-	assert(_mm256_extract_epi32(mx[0], 2) == 0x3);
+	assert(_mm256_extract_epi32(e, 2) == 0x3);
 	check_count++;
-	assert((uint32_t)_mm256_extract_epi32(mx[0], 4) == (uint32_t)0xffffffff);
+	assert((uint32_t)_mm256_extract_epi32(e, 4) == (uint32_t)0xffffffff);
 	check_count++;
-	assert(_mm256_extract_epi32(mx[0], 6) == 0x2);
+	assert(_mm256_extract_epi32(e, 6) == 0x2);
 	check_count++;
 
 	// check modular subtract with carry
-	mx[0] = _mm256_set_epi32(0, 2, 0, 2, 0, 3, 0, 3);
-	my[0] = _mm256_set_epi32(0, 3, 0, 3, 0, 2, 0, 2);
-	mx[1] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
-	my[1] = _mm256_set_epi32(0, 9, 0, 9, 0, 9, 0, 9);
-	mc    = _mm256_set_epi32(0, 0, 0, 1, 0, 0, 0, 1);
-	avx2_modsubtract32(mx,mc, my);
-	assert(_mm256_extract_epi32(mx[0], 0) == 0x1);
+	mx[0] = _mm512_set_epi32(0,2,0,2,0,3,0,3,0, 2, 0, 2, 0, 3, 0, 3);
+	my[0] = _mm512_set_epi32(0,3,0,3,0,2,0,2,0, 3, 0, 3, 0, 2, 0, 2);
+	mx[1] = _mm512_set_epi32(0,9,0,9,0,9,0,9,0, 9, 0, 9, 0, 9, 0, 9);
+	my[1] = _mm512_set_epi32(0,9,0,9,0,9,0,9,0, 9, 0, 9, 0, 9, 0, 9);
+	mc    = _mm512_set_epi32(0,0,0,1,0,0,0,1,0, 0, 0, 1, 0, 0, 0, 1);
+	avx512_modsubtract32(mx,mc, my);
+	e = _mm512_extracti32x8_epi32(mx[0], 0);
+	assert(_mm256_extract_epi32(e, 0) == 0x1);
 	check_count++;
-	assert(_mm256_extract_epi32(mx[0], 2) == 0x1);
+	assert(_mm256_extract_epi32(e, 2) == 0x1);
 	check_count++;
-	assert((uint32_t)_mm256_extract_epi32(mx[0], 4) == (uint32_t)0xffffffff);
+	assert((uint32_t)_mm256_extract_epi32(e, 4) == (uint32_t)0xffffffff);
 	check_count++;
-	assert(_mm256_extract_epi32(mx[0], 6) == 0x2);
+	assert(_mm256_extract_epi32(e, 6) == 0x2);
 	check_count++;
 
+#endif
+
 	// safeguards 
-	b = avx2SprpTest(101, 0);
+	b = avxSprpTest(101, 0);
 	assert(b == true);
 	check_count++;
-	b = avx2SprpTest(103, 0);
+	b = avxSprpTest(103, 0);
 	assert(b == true);
 	check_count++;
+        b = avxSprpTest(0x000000000000003dull, 0x0000000100000000ull);
+	assert(b == true);
+	check_count++;
+
 
 	return check_count;
 
@@ -598,6 +633,11 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+#ifdef __AVX512F__
+#else
+	printf("AVX512 is NOT enabled\n");
+#endif
+
 	printf("Self tests\n");
 	check_count += self_tests();
 
@@ -609,7 +649,7 @@ int main(int argc, char **argv)
 		uint128_t v = convert128(pseudoprimes[i]);
 		v_lo = (uint64_t) v;
 		v_hi = (uint64_t) (v >> 64);
-		b = avx2SprpTest(v_lo, v_hi);
+		b = avxSprpTest(v_lo, v_hi);
 		assert(b == false);
 		check_count++;
 	}
@@ -622,7 +662,7 @@ int main(int argc, char **argv)
 		uint128_t v = convert128(composites[i]);
 		v_lo = (uint64_t) v;
 		v_hi = (uint64_t) (v >> 64);
-		b = avx2SprpTest(v_lo, v_hi);
+		b = avxSprpTest(v_lo, v_hi);
 		assert(b == false);
 		check_count++;
 	}
@@ -635,7 +675,7 @@ int main(int argc, char **argv)
 		uint128_t v = convert128(square_root[i]);
 		v_lo = (uint64_t) v;
 		v_hi = (uint64_t) (v >> 64);
-		b = avx2SprpTest(v_lo, v_hi);
+		b = avxSprpTest(v_lo, v_hi);
 		assert(b == false);
 		check_count++;
 	}
@@ -656,7 +696,7 @@ int main(int argc, char **argv)
 		v_lo = (uint64_t) v_max;
 		v_hi = (uint64_t) (v_max >> 64);
 		// my_printf(v_max); printf("\n");
-		b_max = avx2SprpTest(v_lo, v_hi);
+		b_max = avxSprpTest(v_lo, v_hi);
 		assert(b_max == true);
 		check_count++;
 	}

@@ -5,7 +5,7 @@
 # GGG = g++ -O3 -W -s -m64 -march=native -fomit-frame-pointer -fexpensive-optimizations -DPARANOID=0 -I . -I ./tools
 GGG = clang++ -O3 -W -s -m64 -march=native -flto -fomit-frame-pointer -DPARANOID=0 -I . -I ./tools
 
-all: all_avx2 all_unit_tests all_tests all_perf
+all: all_avx512 all_avx2 all_unit_tests all_tests all_perf
 
 all_unit_tests: unit_tests/m_reg_tests unit_tests/generic_tests unit_tests/barrett_tests unit_tests/optimized65_tests unit_tests/divisibility_tests
 
@@ -13,7 +13,9 @@ all_tests: tests/sanity_check tests/random_test tests/gap_check
 
 all_perf: perf/fermat_perf perf/sprp_perf perf/generic_perf perf/barrett645
 
-all_avx2: tests/avx2_gap_check tests/avx2_sanity_check
+all_avx2: tests/avx2_gap_check tests/avx2_sanity_check perf/avx2_sprp_perf
+
+all_avx512: tests/avx512_gap_check tests/avx512_sanity_check
 
 perf/sprp_perf: perf/sprp_perf.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tools/slow.cpp tools/slow.h tools/generic.cpp tools/generic.h
 	$(GGG) -o perf/sprp_perf perf/sprp_perf.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp tools/slow.cpp tools/generic.cpp
@@ -38,6 +40,15 @@ tests/avx2_sanity_check: tests/avx2_sanity_check.cpp m128_utils.h m128_utils.cpp
 
 tests/avx2_gap_check: tests/avx2_gap_check.cpp avx2_sprp.h avx2_sprp.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel tools/divisibility.cpp
 	$(GGG) -fopenmp=libomp -o tests/avx2_gap_check avx2_sprp.cpp tests/avx2_gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp tools/divisibility.cpp
+
+perf/avx2_sprp_perf: perf/avx2_sprp_perf.cpp avx2_sprp.h avx2_sprp.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tools/slow.h tools/slow.cpp
+	$(GGG) -o perf/avx2_sprp_perf perf/avx2_sprp_perf.cpp avx2_sprp.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp tools/slow.cpp
+
+tests/avx512_sanity_check: tests/avx512_sanity_check.cpp m128_utils.h m128_utils.cpp m_reg.h avx2_sprp.cpp avx2_sprp.h 
+	$(GGG) -o tests/avx512_sanity_check tests/avx512_sanity_check.cpp m128_utils.cpp
+
+tests/avx512_gap_check: tests/avx512_gap_check.cpp avx2_sprp.h avx2_sprp.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tests/gap_check.wheel tools/divisibility.cpp
+	$(GGG) -fopenmp=libomp -o tests/avx512_gap_check avx2_sprp.cpp tests/avx512_gap_check.cpp m128_utils.cpp optimized128.cpp optimized65.cpp montgomery128.cpp tools/divisibility.cpp
 
 tests/random_test: tests/random_test.cpp m128_utils.h m128_utils.cpp m_reg.h optimized128.cpp optimized65.cpp montgomery128.cpp montgomery.h tools/generic.cpp tools/generic.h tools/slow.cpp tools/slow.h
 	$(GGG) -o tests/random_test tests/random_test.cpp m128_utils.cpp optimized65.cpp optimized128.cpp montgomery128.cpp tools/generic.cpp tools/slow.cpp

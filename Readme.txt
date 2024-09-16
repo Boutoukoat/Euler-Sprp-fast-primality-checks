@@ -96,10 +96,14 @@ __arch64__ support:
 
 	GGG = aarch64-linux-gnu-g++ -O3 -W -static -DPARANOID=1 -I . -I ./tools
 
-__avx256__ support:
+__avx2__ support:
+__avx512__ support:
 
-	experimental, work in progress !!! : avx2 is used to run 4 sprp tests at the same time for deterministic primality checks
-	(heavy rework to expect)
+	avx2 is used to run 4 sprp tests at the same time for deterministic primality checks
+	avx512 is used to run 8 sprp tests at the same time for deterministic primality checks
+
+__ifma__ support:
+	(work in progress) avx512-ifma is used to run 4 sprp tests at the same time for deterministic primality checks
 
 uint128_t support:
 Note that the compiler must support natively a uint128_t type, and such a class implementation 
