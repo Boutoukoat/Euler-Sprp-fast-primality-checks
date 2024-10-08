@@ -45,7 +45,7 @@ static uint128_t search_backwards(uint128_t lo, uint128_t hi)
 		uint64_t t_hi = (uint64_t) (hi >> 64);
 		bool bd = divisibility_sieve(t_lo, t_hi);
 		if (bd) {
-			// no trivial factor
+			// no trivial factor, check sprp base2
 			bool bs = optimizedSprpTest(t_lo, t_hi);
 			if (bs) {
 				// pseudoprime found
@@ -85,6 +85,7 @@ static uint128_t search_forwards(uint128_t lo, uint128_t hi)
 		uint64_t t_hi = (uint64_t) (lo >> 64);
 		bool bd = divisibility_sieve(t_lo, t_hi);
 		if (bd) {
+			// no trivial factor, check sprp base2
 			bool bs = optimizedSprpTest(t_lo, t_hi);
 			if (bs) {
 				// pseudoprime found

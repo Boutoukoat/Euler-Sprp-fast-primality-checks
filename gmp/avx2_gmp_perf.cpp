@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 			tavx -= t;
 			bavx = (divisibility_sieve((uint64_t) x, (uint64_t) (x >> 64))
 				&& optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64))
-				&& avx2SprpTest((uint64_t) x, (uint64_t) (x >> 64)));
+				&& avxSprpTest((uint64_t) x, (uint64_t) (x >> 64)));
 			t = _rdtsc();
 			tavx += t;
 			tgmp -= t;
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 			tavx -= t;
 			bavx = (divisibility_sieve((uint64_t) x, (uint64_t) (x >> 64))
 				&& optimizedSprpTest((uint64_t) x, (uint64_t) (x >> 64))
-				&& avx2SprpTest((uint64_t) x, (uint64_t) (x >> 64)));
+				&& avxSprpTest((uint64_t) x, (uint64_t) (x >> 64)));
 			t = _rdtsc();
 			tavx += t;
 			tgmp -= t;

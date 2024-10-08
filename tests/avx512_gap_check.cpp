@@ -186,6 +186,9 @@ int main(int argc, char **argv)
 #else
 #error "AVX2 Deterministic primality checks NOT enabled!"
 #endif
+#ifdef __AVX512F__
+	printf("AVX512 and deterministic primality checks enabled\n");
+#endif
 	printf("\n");
 	char tempdisplay[140];
 	printf("range from %s\n", display128(tempdisplay, start, radix, digits));

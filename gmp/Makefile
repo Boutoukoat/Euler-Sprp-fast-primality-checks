@@ -1,10 +1,10 @@
 
-# GGG = clang++ -O3 -W -s -m64 -march=native -flto -static -fomit-frame-pointer -DPARANOID=0 -I . -I ./..
+# GGG = clang++ -O3 -W -s -m64 -march=native -mno-vzeroupper -flto -static -fomit-frame-pointer -DPARANOID=0 -I . -I ./..
 # GGG = aarch64-linux-gnu-g++ -O3 -W -static -DPARANOID=0 -I . -I ./..
 # GGG = g++ -O0 -W -g -m64 -march=native -DPARANOID=1 -I . -I ./..
 # GGG = clang++ -O0 -W -g -m64 -march=native -DPARANOID=1 -I . -I ./..
-# GGG = g++ -O3 -W -s -m64 -march=native -fomit-frame-pointer -fexpensive-optimizations -DPARANOID=0 -I . -I ./..
-GGG = clang++ -O3 -s -W -m64 -march=native -flto -static -fomit-frame-pointer -DPARANOID=0 -I . -I ./.. -I ./../tools
+# GGG = clang++ -O3 -s -W -m64 -march=native -mavx512f -mavx512dq -mavx512vl -mllvm -x86-use-vzeroupper=0 -flto -static -fomit-frame-pointer -DPARANOID=0 -I . -I ./.. -I ./../tools
+GGG = clang++ -O3 -s -W -m64 -march=native -mllvm -x86-use-vzeroupper=0 -flto -static -fomit-frame-pointer -DPARANOID=0 -I . -I ./.. -I ./../tools
 
 all: avx2_gmp_cmp avx2_gmp_perf
 

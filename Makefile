@@ -2,8 +2,9 @@
 # GGG = clang++ --target=aarch64-pc-linux -O3 -W -static -DPARANOID=0 -I . -I ./tools   # untested !
 # GGG = g++ -O0 -W -g -m64 -march=native -DPARANOID=1 -I . -I ./tools
 # GGG = clang++ -O0 -W -g -m64 -march=native -DPARANOID=1 -I . -I ./tools
-# GGG = g++ -O3 -W -s -m64 -march=native -fomit-frame-pointer -fexpensive-optimizations -DPARANOID=0 -I . -I ./tools
-GGG = clang++ -O3 -W -s -m64 -march=native -flto -fomit-frame-pointer -DPARANOID=0 -I . -I ./tools
+# GGG = g++ -O3 -W -s -m64 -march=native -mno-vzeroupper -fomit-frame-pointer -fexpensive-optimizations -DPARANOID=0 -I . -I ./tools
+# GGG = clang++ -O3 -W -s -m64 -march=native -mavx512f -mavx512vl -mavx512dq -mllvm -x86-use-vzeroupper=0 -flto -fomit-frame-pointer -DPARANOID=0 -I . -I ./tools
+GGG = clang++ -O3 -W -s -m64 -march=native -mllvm -x86-use-vzeroupper=0 -flto -fomit-frame-pointer -DPARANOID=0 -I . -I ./tools
 
 all: all_avx512 all_avx2 all_unit_tests all_tests all_perf
 
@@ -73,7 +74,7 @@ clean:
 	rm -f ./tests/random_test ./tests/sanity_check ./tests/gap_check
 	rm -f ./unit_tests/generic_tests unit_tests/m_reg_tests ./unit_tests/barrett_tests ./unit_tests/optimized65_tests ./unit_tests/divisibility_tests
 	rm -f ./gmp/avx2_gmp_cmp ./gmp/avx2_gmp_perf ./tests/avx2_gap_check ./tests/avx2_sanity_check
-
+	rm -f ./tests/avx512_gap_check ./tests/avx512_sanity_check
 
 csv: perf/fermat_perf perf/sprp_perf perf/generic_perf 
 	perf/fermat_perf -csv | tee misc/fermat.csv

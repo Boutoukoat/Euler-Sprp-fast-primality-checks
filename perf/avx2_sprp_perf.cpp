@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "m_reg.h"
+#include "m64_utils.h"
 #include "m128_utils.h"
 #include "slow.h"
 #include "optimized.h"
@@ -17,6 +18,101 @@ static uint128_t my_random(void)
 	// shuffle
 	uint128_t x = seed ^ (seed >> 17) ^ (seed << 13);
 	return x;
+}
+
+static bool isprime(uint128_t x)
+{
+	// good enough for finding primes for performance testing 
+	// A rare pseudoprime (without a small factor) would not affect the average timing
+	if (x > 5 && x % 5 == 0) return false;
+	if (x > 7 && x % 7 == 0) return false;
+	if (x > 11 && x % 11 == 0) return false;
+	if (x > 13 && x % 13 == 0) return false;
+	if (x > 17 && x % 17 == 0) return false;
+	if (x > 19 && x % 19 == 0) return false;
+	if (x > 23 && x % 23 == 0) return false;
+	return my_slowSprp2(x) && my_slowSprp3(x) && my_slowSprp5(x); 
+}
+
+static bool avx256_test(uint128_t v)
+{
+        uint32_t mm = montgomeryInverse32((uint32_t) v);
+
+	if (v >> 32 == 0)
+	{
+		uint32_t montg_bases[4];
+		uint32_t one = montgomery_bases1(montg_bases, v, 4);
+		return avx2_sprp1(v, mm, one, montg_bases);
+	}
+
+	if (v >> 64 == 0)
+	{
+		uint64_t montg_bases[4];
+		uint64_t one = montgomery_bases2(montg_bases, v, 4);
+		return avx2_sprp2(v, mm, one, montg_bases);
+	}
+
+	if (v >> 96 == 0)
+	{
+		uint128_t montg_bases[4];
+		uint128_t one = montgomery_bases3(montg_bases, v, 4);
+		return avx2_sprp3(v, mm, one, montg_bases);
+	}
+
+	else
+	{
+		uint128_t montg_bases[4];
+		uint128_t one = montgomery_bases4(montg_bases, v, 4);
+		return avx2_sprp4(v, mm, one, montg_bases);
+	}
+}
+
+static bool avx512_test(uint128_t v)
+{
+        uint32_t mm = montgomeryInverse32((uint32_t) v);
+
+	if (v >> 32 == 0)
+	{
+		uint32_t montg_bases[8];
+		uint32_t one = montgomery_bases1(montg_bases, v, 8);
+#ifdef __AVX512F__
+		return avx512_sprp1(v, mm, one, montg_bases);
+#else
+		return avx22_sprp1(v, mm, one, montg_bases);
+#endif
+	}
+
+	if (v >> 64 == 0)
+	{
+		uint64_t montg_bases[8];
+		uint64_t one = montgomery_bases2(montg_bases, v, 8);
+#ifdef __AVX512F__
+		return avx512_sprp2(v, mm, one, montg_bases);
+#else
+		return avx22_sprp2(v, mm, one, montg_bases);
+#endif
+	}
+
+	if (v >> 96 == 0)
+	{
+		uint128_t montg_bases[8];
+		uint128_t one = montgomery_bases3(montg_bases, v, 8);
+#ifdef __AVX512F__
+		return avx512_sprp3(v, mm, one, montg_bases);
+#else
+		return avx22_sprp3(v, mm, one, montg_bases);
+#endif
+	}
+	else
+	{
+		uint128_t montg_bases[8];
+		uint128_t one = montgomery_bases4(montg_bases, v, 8);
+#ifdef __AVX512F__
+		return avx512_sprp4(v, mm, one, montg_bases);
+#else
+		return avx22_sprp4(v, mm, one, montg_bases);
+#endif
+	}
 }
 
 int main(int argc, char **argv)
@@ -109,7 +205,11 @@ int main(int argc, char **argv)
 		printf("Compiled for AVX-512 target\n");
 #endif
 	} else {
-		printf("\"bits\";\"uint64_t\";\"avx2_epi32\";\"avx512_epi32\";\"avx512_ifma\";\n");
+#if defined(__AVX512F__)
+		printf("\"bits\";\"uint64_t\";\"avx2_epu32\";\"avx512_epu32\";\"avx512_ifma\";\n");
+#else
+		printf("\"bits\";\"uint64_t\";\"avx2_epu32\";\"avx2_stitched\";\"avx2_ifma\";\n");
+#endif
 	}
 
 	for (uint64_t bits = start_bit; bits <= end_bit; bits++) {
@@ -137,7 +237,6 @@ int main(int argc, char **argv)
 		uint128_t xstart = x;
 		uint64_t x_lo, x_hi;
 		uint64_t xinc = 4;
-		uint64_t count = 0;
 		uint64_t countopt = 0;
 		uint64_t count256 = 0;
 		uint64_t count512 = 0;
@@ -146,12 +245,10 @@ int main(int argc, char **argv)
 		topt = 0;
 		tavx256 = 0;
 		tavx512 = 0;
-		count = 0;
 
 		// Instruction Cache warmup 
 		x_lo = (uint64_t) x;
 		x_hi = (uint64_t) (x >> 64);
-		count = deterministicSprpCount(x);
 		t -= my_rdtsc();
 		b ^= optimizedSprpTest(x_lo, x_hi);
 		b |= avx2SprpTest(x_lo, x_hi);
@@ -166,30 +263,40 @@ int main(int argc, char **argv)
 		b &= (t == 1);	// some stupid dependency to prevent the compiler to strip out the code
 
 		// minimum test dalay
-		const uint64_t delay = 3e8;
+		const uint64_t delay = 1e7;
 
 		// run for at least 1000000000 cycles of testing
 		while (topt < delay || tavx512 < delay || tavx256 < delay) {
 			// make sure to test only 'bits' number
 			while (x < xend && (topt < delay || tavx512 < delay || tavx256 < delay)) {
 				// test numbers 6^k -1
+				bool prime_only = isprime(x);
+				if (prime_only)
+				{
 				x_lo = (uint64_t) x;
 				x_hi = (uint64_t) (x >> 64);
 				t = my_rdtsc();
 				topt -= t;
+				asm volatile("#");
 				bopt = optimizedSprpTest(x_lo, x_hi);  // uint128_t
+				asm volatile("#");
 				b ^= bopt;
 				t = my_rdtsc();
 				topt += t;
+				tavx512 -= t;
+				asm volatile("#");
+				bavx512 = avx512_test(x);    // avx512 or 2 x avx256
+				asm volatile("#");
+				b |= bavx512;
+				t = my_rdtsc();
+				tavx512 += t;
 				tavx256 -= t;
-				bavx256 = avx2SprpTest(x_lo, x_hi);    // avx256 only
-				b |= bavx256;
+				asm volatile("#");
+				bavx256 = avx256_test(x);     // avx256 only
+				asm volatile("#");
+				b -= bavx256;
 				t = my_rdtsc();
 				tavx256 += t;
-				tavx512 -= t;
-				bavx512 = avxSprpTest(x_lo, x_hi);     // avx512-256
-				b -= bavx512;
-				tavx512 += my_rdtsc();
 
 				if (bavx256 != bavx512) {
 					// some error occured
@@ -226,12 +333,13 @@ int main(int argc, char **argv)
 					assert(bavx512 == bavx256);
 					abort();
 				}
+				countopt += 1;  // uint128_t
+				count256 += 4;  // avx256 
+				count512 += 8;  // avx512
+				countPrime += bavx512;
+				}
 				x += xinc;
 				xinc = 6 - xinc;
-				countopt += 1;      // uint128_t
-				count256 += count;  // avx2 
-				count512 += count;  // avx512
-				countPrime += bavx256;
 			}
 			// x might not be a 'bits' number, restart if needed from the start of the range
 			x = xstart;

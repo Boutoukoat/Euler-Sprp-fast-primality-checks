@@ -11,11 +11,18 @@
 //
 // Gcc and Clang generate too much code to compute the exact modulus, while
 // the only thing needed is the exact divisibility.
-// if (mod_mersenne_36 % 109 == 0) return false;        // composite for sure
 //
-// The simplest equivalent, the Barrett way, might be
+// The usual source code looks like this:
+// 
+//     if (mod_mersenne_36 > 109 && mod_mersenne_36 % 109 == 0) return false;        // composite for sure
 //
-// if ((uint64_t)(n * 0xa6c0964fda6c0965ull) <= 0x02593f69b02593f6ull) return false; // divisible by 109
+//     clang goes thru division and computes d = mod_mersenne_36 / 109 = mod_mersenne_36 * large_cste >> some_bits + correction (hacker's delight)
+//     then  r = mod_mersenne_36 - d * 109 (where multiplication by small constants is optimized)
+//     before checking r == 0
+//
+// The simplest equivalent, the Barrett way, might be this:
+//
+// if ((uint64_t)(n * 0xa6c0964fda6c0965ull) <= 0x02593f69b02593f6ull) return false; // n is divisible by 109
 //
 // This function return false when the input number is composite for sure, and return true in other cases.
 //

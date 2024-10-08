@@ -33,10 +33,22 @@ bool avx2_sprp2(uint64_t v, uint32_t mm, uint64_t on, uint64_t * bases);	// 32-6
 bool avx2_sprp3(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases);	// 64-95 bits
 bool avx2_sprp4(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases);	// 96-127 bits
 
+bool avx22_sprp1(uint32_t v, uint32_t mm, uint32_t on, uint32_t * bases);	// 2-31 bits
+bool avx22_sprp2(uint64_t v, uint32_t mm, uint64_t on, uint64_t * bases);	// 32-63 bits
+bool avx22_sprp3(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases);	// 64-95 bits
+bool avx22_sprp4(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases);	// 96-127 bits
+
+#ifdef __AVX512F__
 bool avx512_sprp1(uint32_t v, uint32_t mm, uint32_t on, uint32_t * bases);	// 2-31 bits
 bool avx512_sprp2(uint64_t v, uint32_t mm, uint64_t on, uint64_t * bases);	// 32-63 bits
 bool avx512_sprp3(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases);	// 64-95 bits
 bool avx512_sprp4(uint128_t v, uint32_t mm, uint128_t on, uint128_t * bases);	// 96-127 bits
+#endif
+
+uint32_t montgomery_bases1(uint32_t * montg_bases, uint32_t v, uint64_t count);
+uint64_t montgomery_bases2(uint64_t * montg_bases, uint64_t v, uint64_t count);
+uint128_t montgomery_bases3(uint128_t * montg_bases, uint128_t v, uint64_t count);
+uint128_t montgomery_bases4(uint128_t * montg_bases, uint128_t v, uint64_t count);
 
 unsigned deterministicSprpCount(uint128_t v);       // all sizes
 bool avx2SprpTest(uint64_t v_lo, uint64_t v_hi);    // all sizes, avx2-only for test purposes

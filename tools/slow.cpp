@@ -303,3 +303,59 @@ bool my_slowSprp3(uint128_t mod)
 	}
 	return false;
 }
+
+// SPRP base 5 test 
+bool my_slowSprp5(uint128_t mod)
+{
+#if PARANOID
+	assert((mod & 1) == 1);
+#endif
+	uint128_t result = 1;
+	uint128_t k = 0;
+	uint128_t scan = mod - 1;
+	while ((scan & 1) == 0) {
+		scan >>= 1;
+		k += 1;
+	}
+	int bit = 128;
+	while (bit > 1) {
+		bit--;
+		if ((scan >> bit) & 1) {
+			result = 5;
+			break;
+		}
+	}
+
+	while (bit > 0) {
+		bit--;
+		// square
+		result = my_slowModSqr(result, mod);
+		if ((scan >> bit) & 1) {
+			// multiply by 5
+			uint128_t t = my_slowModAdd(result, result, mod);   // result * 2
+			t = my_slowModAdd(t, t, mod);                       // result * 4
+			result = my_slowModAdd(t, result, mod);             // result * 5
+		}
+	}
+
+	if (result == 1) {
+		return true;
+	}
+	while (k > 1) {
+		k -= 1;
+		if (result == mod - 1) {
+			return true;
+		}
+		// square
+		result = my_slowModSqr(result, mod);
+		if (result == 1) {
+			return false;
+		}
+
+	}
+	if (result == mod - 1) {
+		return true;
+	}
+	return false;
+}
+
